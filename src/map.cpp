@@ -6,6 +6,8 @@
 #include <iostream>
 #include <sstream>
 
+int PathPlanning::Map::LaneIndex(double d) { return (int)(d / PathPlanning::LANE_WIDTH); }
+
 PathPlanning::Map::Map() : waypoints_x(0), waypoints_y(0), waypoints_s(0), waypoints_dx(0), waypoints_dy(0) {}
 
 void PathPlanning::Map::LoadWaypoints(std::string file_path) {
@@ -38,44 +40,6 @@ void PathPlanning::Map::LoadWaypoints(std::string file_path) {
   }
 
   map_file.close();
-}
-
-int PathPlanning::Map::ClosestWaypoint(double x, double y) {
-  double closestLen = 100000;  // large number
-  int closestWaypoint = 0;
-
-  for (int i = 0; i < waypoints_x.size(); i++) {
-    double map_x = waypoints_x[i];
-    double map_y = waypoints_y[i];
-    double dist = Distance(x, y, map_x, map_y);
-    if (dist < closestLen) {
-      closestLen = dist;
-      closestWaypoint = i;
-    }
-  }
-
-  return closestWaypoint;
-}
-
-int PathPlanning::Map::NextWaypoint(double x, double y, double theta) {
-  int closestWaypoint = ClosestWaypoint(x, y);
-
-  double map_x = waypoints_x[closestWaypoint];
-  double map_y = waypoints_y[closestWaypoint];
-
-  double heading = std::atan2((map_y - y), (map_x - x));
-
-  double angle = std::fabs(theta - heading);
-  angle = std::min(2 * M_PI - angle, angle);
-
-  if (angle > M_PI / 4) {
-    closestWaypoint++;
-    if (closestWaypoint == waypoints_x.size()) {
-      closestWaypoint = 0;
-    }
-  }
-
-  return closestWaypoint;
 }
 
 // Transform from Cartesian x,y coordinates to Frenet s,d coordinates
@@ -146,4 +110,42 @@ std::vector<double> PathPlanning::Map::FrenetToCartesian(double s, double d) {
   double y = seg_y + d * sin(perp_heading);
 
   return {x, y};
+}
+
+int PathPlanning::Map::ClosestWaypoint(double x, double y) {
+  double closestLen = 100000;  // large number
+  int closestWaypoint = 0;
+
+  for (int i = 0; i < waypoints_x.size(); i++) {
+    double map_x = waypoints_x[i];
+    double map_y = waypoints_y[i];
+    double dist = Distance(x, y, map_x, map_y);
+    if (dist < closestLen) {
+      closestLen = dist;
+      closestWaypoint = i;
+    }
+  }
+
+  return closestWaypoint;
+}
+
+int PathPlanning::Map::NextWaypoint(double x, double y, double theta) {
+  int closestWaypoint = ClosestWaypoint(x, y);
+
+  double map_x = waypoints_x[closestWaypoint];
+  double map_y = waypoints_y[closestWaypoint];
+
+  double heading = std::atan2((map_y - y), (map_x - x));
+
+  double angle = std::fabs(theta - heading);
+  angle = std::min(2 * M_PI - angle, angle);
+
+  if (angle > M_PI / 4) {
+    closestWaypoint++;
+    if (closestWaypoint == waypoints_x.size()) {
+      closestWaypoint = 0;
+    }
+  }
+
+  return closestWaypoint;
 }

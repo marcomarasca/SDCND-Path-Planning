@@ -6,7 +6,9 @@
 
 namespace PathPlanning {
 // The max s value before wrapping around the track back to 0
-const double WRAP_AROUND_S = 6945.554;
+const double MAP_MAX_S = 6945.554;
+// Lane width in meters
+const double LANE_WIDTH = 4.0;
 
 class Map {
  private:
@@ -17,15 +19,17 @@ class Map {
   std::vector<double> waypoints_dy;
 
  public:
+  static int LaneIndex(double d);
+
   Map();
   ~Map(){};
   void LoadWaypoints(std::string file_path);
+  std::vector<double> CartesianToFrenet(double x, double y, double theta);
+  std::vector<double> FrenetToCartesian(double s, double d);
 
  private:
   int ClosestWaypoint(double x, double y);
   int NextWaypoint(double x, double y, double theta);
-  std::vector<double> CartesianToFrenet(double x, double y, double theta);
-  std::vector<double> FrenetToCartesian(double s, double d);
 };
 
 }  // namespace PathPlanning

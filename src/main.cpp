@@ -4,6 +4,7 @@
 
 #include "json.hpp"
 #include "map.h"
+#include "path_planner.h"
 #include "utils.h"
 
 // for convenience
@@ -28,33 +29,17 @@ void SendMessage(uWS::WebSocket<uWS::SERVER> &ws, std::string msg) {
   ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
 }
 
-void ProcessTelemetry(uWS::WebSocket<uWS::SERVER> &ws, PathPlanning::Map &map, PathPlanning::Timer &timer,
-                      json &telemetry) {
-  double car_x = telemetry[1]["x"];
-  double car_y = telemetry[1]["y"];
-  double car_s = telemetry[1]["s"];
-  double car_d = telemetry[1]["d"];
-  double car_yaw = telemetry[1]["yaw"];
-  double car_speed = telemetry[1]["speed"];
+void ProcessTelemetry(uWS::WebSocket<uWS::SERVER> &ws, PathPlanning::PathPlanner &pathPlanner,
+                      PathPlanning::Timer &timer, json &telemetry) {
+  // Updates the state of the planner using the data from the telemetry
+  pathPlanner.Update(telemetry);
 
-  // Previous path data given to the Planner
-  auto previous_path_x = telemetry[1]["previous_path_x"];
-  auto previous_path_y = telemetry[1]["previous_path_y"];
-  // Previous path's end s and d values
-  double end_path_s = telemetry[1]["end_path_s"];
-  double end_path_d = telemetry[1]["end_path_d"];
-
-  // Sensor Fusion Data, a list of all other cars on the same side of the road.
-  auto sensor_fusion = telemetry[1]["sensor_fusion"];
+  PathPlanning::Path path = pathPlanner.NextPath();
 
   json msgJson;
 
-  std::vector<double> next_x_vals;
-  std::vector<double> next_y_vals;
-
-  // TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
-  msgJson["next_x"] = next_x_vals;
-  msgJson["next_y"] = next_y_vals;
+  msgJson["next_x"] = path[0];
+  msgJson["next_y"] = path[1];
 
   auto msg = "42[\"control\"," + msgJson.dump() + "]";
 
@@ -64,26 +49,28 @@ void ProcessTelemetry(uWS::WebSocket<uWS::SERVER> &ws, PathPlanning::Map &map, P
 void StartServer(PathPlanning::Map &map) {
   uWS::Hub h;
   PathPlanning::Timer timer;
+  PathPlanning::PathPlanner pathPlanner(map);
 
-  h.onMessage([&map, &timer](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
-    // "42" at the start of the message means there's a websocket message event.
-    // The 4 signifies a websocket message
-    // The 2 signifies a websocket event
-    // std::string sdata = std::string(data).substr(0, length);
-    if (length && length > 2 && data[0] == '4' && data[1] == '2') {
-      std::string message = HasData(data);
-      if (message != "") {
-        auto json_obj = json::parse(message);
-        std::string event = json_obj[0].get<std::string>();
-        if (event == "telemetry") {
-          ProcessTelemetry(ws, map, timer, json_obj[1]);
+  h.onMessage(
+      [&map, &pathPlanner, &timer](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+        // "42" at the start of the message means there's a websocket message event.
+        // The 4 signifies a websocket message
+        // The 2 signifies a websocket event
+        // std::string sdata = std::string(data).substr(0, length);
+        if (length && length > 2 && data[0] == '4' && data[1] == '2') {
+          std::string message = HasData(data);
+          if (message != "") {
+            auto json_obj = json::parse(message);
+            std::string event = json_obj[0].get<std::string>();
+            if (event == "telemetry") {
+              ProcessTelemetry(ws, pathPlanner, timer, json_obj[1]);
+            }
+          } else {
+            // Manual driving
+            SendMessage(ws, "42[\"manual\",{}]");
+          }
         }
-      } else {
-        // Manual driving
-        SendMessage(ws, "42[\"manual\",{}]");
-      }
-    }
-  });
+      });
 
   // We don't need this since we're not using HTTP but if it's removed the
   // program
@@ -102,7 +89,6 @@ void StartServer(PathPlanning::Map &map) {
       [](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) { std::cout << "Connected!!!" << std::endl; });
 
   h.onDisconnection([](uWS::WebSocket<uWS::SERVER> ws, int code, char *message, size_t length) {
-    ws.close();
     std::cout << "Disconnected" << std::endl;
   });
 
