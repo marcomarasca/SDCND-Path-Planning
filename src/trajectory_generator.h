@@ -1,21 +1,25 @@
-#ifndef TRAJECTORY_GENERATOR_H
-#define TRAJECTORY_GENERATOR_H
+#ifndef PP_TRAJECTORY_GENERATOR_H
+#define PP_TRAJECTORY_GENERATOR_H
 
 #include <vector>
+#include "utils.h"
 
 namespace PathPlanning {
 
 struct Frenet {
-  std::vector<double> s;
-  std::vector<double> d;
+  State s;
+  State d;
+
+  Frenet(const State &s, const State &d) : s(s), d(d){};
 };
 
+using Coeff = std::vector<double>;
 using FTrajectory = std::vector<Frenet>;
 
 class TrajectoryGenerator {
  private:
   double step_dt;
-  std::vector<double> JMT(const std::vector<double> &start, const std::vector<double> &target, double T);
+  Coeff JMT(const State &start, const State &target, double T);
 
  public:
   TrajectoryGenerator(double step_dt);

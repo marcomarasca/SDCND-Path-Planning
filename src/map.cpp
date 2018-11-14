@@ -5,8 +5,8 @@
 #include <iostream>
 #include <sstream>
 
-size_t PathPlanning::Map::LaneIndex(double d) { return (int)(d / PathPlanning::LANE_WIDTH); }
-double PathPlanning::Map::LaneDisplacement(size_t lane_index) { return lane_index * LANE_WIDTH + LANE_WIDTH / 2; }
+size_t PathPlanning::Map::LaneIndex(double d) { return (size_t)(d / PathPlanning::LANE_WIDTH); }
+double PathPlanning::Map::LaneDisplacement(size_t lane_index) { return lane_index * LANE_WIDTH + LANE_WIDTH / 2.0; }
 double PathPlanning::Map::WrapDistance(double s) { return fmod(s, MAP_MAX_S); }
 
 PathPlanning::Map::Map() {}
@@ -63,10 +63,10 @@ void PathPlanning::Map::LoadWaypoints(std::string file_path) {
   waypoints_dx.emplace_back(dx0);
   waypoints_dy.emplace_back(dy0);
 
-  this->spline_x.set_points(waypoints_s, waypoints_x);
-  this->spline_y.set_points(waypoints_s, waypoints_y);
-  this->spline_dx.set_points(waypoints_s, waypoints_dx);
-  this->spline_dy.set_points(waypoints_s, waypoints_dy);
+  spline_x.set_points(waypoints_s, waypoints_x);
+  spline_y.set_points(waypoints_s, waypoints_y);
+  spline_dx.set_points(waypoints_s, waypoints_dx);
+  spline_dy.set_points(waypoints_s, waypoints_dy);
 }
 
 // Transform from Frenet s,d coordinates to Cartesian x,y

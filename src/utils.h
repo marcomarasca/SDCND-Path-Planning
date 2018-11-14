@@ -1,5 +1,5 @@
-#ifndef UTILS_H
-#define UTILS_H
+#ifndef PP_UTILS_H
+#define PP_UTILS_H
 
 #include <math.h>
 #include <chrono>
@@ -11,13 +11,24 @@
 
 namespace PathPlanning {
 
+struct State {
+  // Position
+  double p;
+  // Velocity
+  double v;
+  // Acceleration
+  double a;
+
+  State() : p(0), v(0), a(0){};
+  State(double p, double v, double a) : p(p), v(v), a(a){};
+};
+
 using TimePoint = std::chrono::time_point<std::chrono::steady_clock, std::chrono::nanoseconds>;
 using Duration = std::chrono::nanoseconds;
 
 // Class to keep track of computation time
 class Timer {
  public:
-
   static std::chrono::milliseconds ToMilliseconds(Duration duration) {
     return std::chrono::duration_cast<std::chrono::milliseconds>(duration);
   }

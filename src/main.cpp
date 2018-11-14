@@ -41,7 +41,8 @@ void ProcessTelemetry(uWS::WebSocket<uWS::SERVER> &ws, PathPlanning::PathPlanner
   PathPlanning::Trajectory trajectory = pathPlanner.getGlobalCoordTrajectory();
 
   std::cout << "Time: " << PathPlanning::Timer::ToMilliseconds(update_d).count() << " ms" << std::endl;
-  std::cout << "Avg Time: " << PathPlanning::Timer::ToMilliseconds(timer.AverageDuration()).count() << " ms" << std::endl;
+  std::cout << "Avg Time: " << PathPlanning::Timer::ToMilliseconds(timer.AverageDuration()).count() << " ms"
+            << std::endl;
 
   json msgJson;
 
@@ -56,7 +57,7 @@ void ProcessTelemetry(uWS::WebSocket<uWS::SERVER> &ws, PathPlanning::PathPlanner
 void StartServer(PathPlanning::Map &map) {
   uWS::Hub h;
   PathPlanning::Timer timer;
-  PathPlanning::PathPlanner pathPlanner(map);
+  PathPlanning::PathPlanner pathPlanner{map};
 
   h.onMessage(
       [&map, &pathPlanner, &timer](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {

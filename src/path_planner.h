@@ -1,5 +1,5 @@
-#ifndef PLANNER_H
-#define PLANNER_H
+#ifndef PP_PATH_PLANNER_H
+#define PP_PATH_PLANNER_H
 
 #include <map>
 #include <vector>
@@ -11,13 +11,16 @@
 #include "vehicle.h"
 
 namespace PathPlanning {
-
-// Number of points for the trajectory
-const double TRAJECTORY_STEPS = 100;
-// Delta t between trajectory points in seconds
-const double TRAJECTORY_STEP_DT = 0.02;
 // Total time in seconds for the trajectory
-const double TRAJECTORT_T = TRAJECTORY_STEPS * TRAJECTORY_STEP_DT;
+const double TRAJECTORT_T = 1.5;
+// Delta t between trajectory points in seconds (same as simulator controller update rate)
+const double TRAJECTORY_STEP_DT = 0.02;
+// Number of points for the trajectory
+const size_t TRAJECTORY_STEPS = TRAJECTORT_T / TRAJECTORY_STEP_DT;
+// Max speed in m/s
+const double MAX_SPEED = Mph2ms(48);
+// Max acceleration in m/s^2
+const double MAX_ACC = 10;
 
 using json = nlohmann::json;
 using Trajectory = std::vector<std::vector<double>>;

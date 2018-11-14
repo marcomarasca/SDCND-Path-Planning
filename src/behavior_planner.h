@@ -1,5 +1,5 @@
-#ifndef BEHAVIOR_PLANNER_H
-#define BEHAVIOR_PLANNER_H
+#ifndef PP_BEHAVIOR_PLANNER_H
+#define PP_BEHAVIOR_PLANNER_H
 
 #include "map.h"
 #include "vehicle.h"
