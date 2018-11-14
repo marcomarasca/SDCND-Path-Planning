@@ -1,12 +1,15 @@
 #ifndef MAP_H
 #define MAP_H
 
-#include "utils.h"
 #include <string>
 #include <vector>
+#include "spline.h"
+#include "utils.h"
 
 namespace PathPlanning {
-  
+
+using tk::spline;
+
 // The max s value before wrapping around the track back to 0
 const double MAP_MAX_S = 6945.554;
 // Lane width in meters
@@ -16,24 +19,19 @@ const double MAX_SPEED = Mph2ms(50);
 
 class Map {
  private:
-  std::vector<double> waypoints_x;
-  std::vector<double> waypoints_y;
-  std::vector<double> waypoints_s;
-  std::vector<double> waypoints_dx;
-  std::vector<double> waypoints_dy;
+  spline spline_x;
+  spline spline_y;
+  spline spline_dx;
+  spline spline_dy;
 
  public:
   static int LaneIndex(double d);
+  static double WrapS(double s);
 
   Map();
   ~Map(){};
   void LoadWaypoints(std::string file_path);
-  std::vector<double> CartesianToFrenet(double x, double y, double theta);
   std::vector<double> FrenetToCartesian(double s, double d);
-
- private:
-  int ClosestWaypoint(double x, double y);
-  int NextWaypoint(double x, double y, double theta);
 };
 
 }  // namespace PathPlanning

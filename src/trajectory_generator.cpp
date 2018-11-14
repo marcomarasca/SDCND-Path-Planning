@@ -18,7 +18,7 @@ PathPlanning::Trajectory PathPlanning::TrajectoryGenerator::Generate(const Frene
   PathPlanning::Trajectory trajectory;
 
   // Computes the values for each step of the trajectory
-  for (size_t i = 0; i < steps; i++) {
+  for (size_t i = 1; i <= steps; ++i) {
     const double t = i * dt;
     double s = 0;
     double d = 0;
@@ -38,13 +38,13 @@ PathPlanning::Trajectory PathPlanning::TrajectoryGenerator::Generate(const Frene
 
 std::vector<double> PathPlanning::TrajectoryGenerator::JMT(const std::vector<double> &start, const std::vector<double> &target, double T) {
   const double T_2 = T * T;
-  const double T_3 = T_2 * T;
-  const double T_4 = T_3 * T;
-  const double T_5 = T_4 * T;
+  const double T_3 = T * T_2;
+  const double T_4 = T * T_3;
+  const double T_5 = T * T_4;
 
   Matrix3d t_matrix;
-  t_matrix << T_3    , T_4     , T_5, 
-              3 * T_2, 4 * T_3 , 5 * T_4,
+  t_matrix <<     T_3,      T_4,      T_5, 
+              3 * T_2,  4 * T_3,  5 * T_4,
               6 * T  , 12 * T_2, 20 * T_3;
 
   Vector3d s_vector;

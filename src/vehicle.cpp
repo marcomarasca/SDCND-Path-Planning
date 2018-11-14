@@ -11,7 +11,7 @@ PathPlanning::Vehicle::Vehicle(int id, double s, double d) : id(id), s(s), s_v(0
 }
 
 void PathPlanning::Vehicle::UpdatePosition(double s, double d) {
-  this->s = std::fmod(s, MAP_MAX_S);
+  this->s = Map::WrapS(s);
   this->d = d;
   this->lane = Map::LaneIndex(this->d);
 }

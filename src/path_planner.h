@@ -12,7 +12,7 @@
 
 namespace PathPlanning {
 
-const double PATH_STEPS = 50;  // number of steps
+const double PATH_STEPS = 100;  // number of steps
 const double PATH_DT = 0.02;   // seconds
 const double MAX_ACC = 10.0;   // m/s^2
 
@@ -24,10 +24,10 @@ class PathPlanner {
   size_t steps;
   Vehicle ego;
   std::map<int, Vehicle> vehicles;
-  Trajectory fTrajectory;
+  Trajectory f_trajectory;
 
-  BehaviorPlanner behaviorPlanner;
-  TrajectoryGenerator trajectoryGenerator;
+  BehaviorPlanner behavior_planner;
+  TrajectoryGenerator trajectory_generator;
 
  public:
   PathPlanner(Map &map, size_t steps = PATH_STEPS);
