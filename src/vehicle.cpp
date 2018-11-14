@@ -5,32 +5,23 @@
 #include "map.h"
 #include "utils.h"
 
-PathPlanning::Vehicle::Vehicle() : id(EGO_ID), x(0), y(0), s(0), d(0), speed(0), yaw(0), lane(0) {}
-PathPlanning::Vehicle::Vehicle(int id, double x, double y, double s, double d, double speed, double yaw)
-    : id(id), x(x), y(y), s(s), d(d), speed(speed), yaw(yaw) {
+PathPlanning::Vehicle::Vehicle() : id(EGO_ID), s(0), s_v(0), s_a(0), d(0), d_v(0), d_a(0) {}
+PathPlanning::Vehicle::Vehicle(int id, double s, double d) : id(id), s(s), s_v(0), s_a(0), d(d), d_v(0), d_a(0) {
   this->lane = Map::LaneIndex(d);
 }
 
-void PathPlanning::Vehicle::Update(double x, double y, double s, double d, double speed, double yaw) {
-  this->x = x;
-  this->y = y;
-  this->s = s;
+void PathPlanning::Vehicle::UpdatePosition(double s, double d) {
+  this->s = std::fmod(s, MAP_MAX_S);
   this->d = d;
-  this->speed = speed;
-  this->yaw = yaw;
   this->lane = Map::LaneIndex(this->d);
 }
 
-void PathPlanning::Vehicle::PrintState() {
-  int h_fill = 13;
-  std::cout << std::left << std::setw(h_fill) << "S";
-  std::cout << std::left << std::setw(h_fill) << "| D";
-  std::cout << std::left << std::setw(h_fill) << "| Speed";
-  std::cout << std::left << std::setw(h_fill) << "| Yaw";
-  std::cout << std::endl;
-  std::cout << std::left << std::setw(h_fill) << this->s;
-  std::cout << std::left << "| " << std::setw(h_fill - 2) << this->d;
-  std::cout << std::left << "| " << std::setw(h_fill - 2) << this->speed;
-  std::cout << std::left << "| " << std::setw(h_fill - 2) << this->yaw;
-  std::cout << std::endl;
+void PathPlanning::Vehicle::UpdateVelocity(double s_v, double d_v) {
+  this->s_v = s_v;
+  this->d_v = d_v;
+}
+
+void PathPlanning::Vehicle::UpdateAcceleration(double s_a, double d_a) {
+  this->s_a = s_a;
+  this->d_a = d_a;
 }

@@ -33,13 +33,13 @@ void ProcessTelemetry(uWS::WebSocket<uWS::SERVER> &ws, PathPlanning::PathPlanner
                       PathPlanning::Timer &timer, json &telemetry) {
   // Updates the state of the planner using the data from the telemetry
   pathPlanner.Update(telemetry);
-
-  PathPlanning::Path path = pathPlanner.NextPath();
+  
+  PathPlanning::Trajectory trajectory = pathPlanner.getGlobalCoordTrajectory();
 
   json msgJson;
 
-  msgJson["next_x"] = path[0];
-  msgJson["next_y"] = path[1];
+  msgJson["next_x"] = trajectory[0];
+  msgJson["next_y"] = trajectory[1];
 
   auto msg = "42[\"control\"," + msgJson.dump() + "]";
 

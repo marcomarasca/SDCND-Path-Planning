@@ -1,14 +1,18 @@
 #ifndef MAP_H
 #define MAP_H
 
+#include "utils.h"
 #include <string>
 #include <vector>
 
 namespace PathPlanning {
+  
 // The max s value before wrapping around the track back to 0
 const double MAP_MAX_S = 6945.554;
 // Lane width in meters
 const double LANE_WIDTH = 4.0;
+// Max speed in m/s
+const double MAX_SPEED = Mph2ms(50);
 
 class Map {
  private:

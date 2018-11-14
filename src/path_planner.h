@@ -3,36 +3,43 @@
 
 #include <map>
 #include <vector>
+
+#include "behavior_planner.h"
 #include "json.hpp"
 #include "map.h"
+#include "trajectory_generator.h"
 #include "vehicle.h"
 
 namespace PathPlanning {
 
-enum VehicleState {
-
-};
+const double PATH_STEPS = 50;  // number of steps
+const double PATH_DT = 0.02;   // seconds
+const double MAX_ACC = 10.0;   // m/s^2
 
 using json = nlohmann::json;
 
-using Path = std::vector<std::vector<double>>;
-
 class PathPlanner {
  private:
-  Map map;
+  Map &map;
+  size_t steps;
   Vehicle ego;
   std::map<int, Vehicle> vehicles;
-  Path current_path;
+  Trajectory fTrajectory;
+
+  BehaviorPlanner behaviorPlanner;
+  TrajectoryGenerator trajectoryGenerator;
 
  public:
-  PathPlanner(const Map &map);
+  PathPlanner(Map &map, size_t steps = PATH_STEPS);
   ~PathPlanner(){};
 
   void Update(const json &telemetry);
-  Path NextPath();
+  Trajectory getGlobalCoordTrajectory();
 
  private:
-  void ParseTelemetry(const json &telemetry);
+  void UpdateEgo(const json &telemetry);
+  void UpdateVehicles(const json &telemetry);
+  void UpdateTrajectory();
 };
 
 }  // namespace PathPlanning
