@@ -12,25 +12,28 @@
 
 namespace PathPlanning {
 
-const double PATH_STEPS = 100;  // number of steps
-const double PATH_DT = 0.02;   // seconds
-const double MAX_ACC = 10.0;   // m/s^2
+// Number of points for the trajectory
+const double TRAJECTORY_STEPS = 100;
+// Delta t between trajectory points in seconds
+const double TRAJECTORY_STEP_DT = 0.02;
+// Total time in seconds for the trajectory
+const double TRAJECTORT_T = TRAJECTORY_STEPS * TRAJECTORY_STEP_DT;
 
 using json = nlohmann::json;
+using Trajectory = std::vector<std::vector<double>>;
 
 class PathPlanner {
  private:
   Map &map;
-  size_t steps;
   Vehicle ego;
   std::map<int, Vehicle> vehicles;
-  Trajectory f_trajectory;
+  FTrajectory f_trajectory;
 
   BehaviorPlanner behavior_planner;
   TrajectoryGenerator trajectory_generator;
 
  public:
-  PathPlanner(Map &map, size_t steps = PATH_STEPS);
+  PathPlanner(Map &map);
   ~PathPlanner(){};
 
   void Update(const json &telemetry);
@@ -40,6 +43,7 @@ class PathPlanner {
   void UpdateEgo(const json &telemetry);
   void UpdateVehicles(const json &telemetry);
   void UpdateTrajectory();
+  Frenet ComputeTarget(Frenet &Start, int target_lane);
 };
 
 }  // namespace PathPlanning

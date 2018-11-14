@@ -5,8 +5,9 @@
 #include <iostream>
 #include <sstream>
 
-int PathPlanning::Map::LaneIndex(double d) { return (int)(d / PathPlanning::LANE_WIDTH); }
-double PathPlanning::Map::WrapS(double s) { return fmod(s, MAP_MAX_S); }
+size_t PathPlanning::Map::LaneIndex(double d) { return (int)(d / PathPlanning::LANE_WIDTH); }
+double PathPlanning::Map::LaneDisplacement(size_t lane_index) { return lane_index * LANE_WIDTH + LANE_WIDTH / 2; }
+double PathPlanning::Map::WrapDistance(double s) { return fmod(s, MAP_MAX_S); }
 
 PathPlanning::Map::Map() {}
 
@@ -70,8 +71,8 @@ void PathPlanning::Map::LoadWaypoints(std::string file_path) {
 
 // Transform from Frenet s,d coordinates to Cartesian x,y
 std::vector<double> PathPlanning::Map::FrenetToCartesian(double s, double d) {
-  const double s_w = WrapS(s);
-  
+  const double s_w = WrapDistance(s);
+
   const double x = this->spline_x(s_w) + this->spline_dx(s_w) * d;
   const double y = this->spline_y(s_w) + this->spline_dy(s_w) * d;
 

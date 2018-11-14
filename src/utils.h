@@ -11,11 +11,12 @@
 
 namespace PathPlanning {
 
+using TimePoint = std::chrono::time_point<std::chrono::steady_clock, std::chrono::nanoseconds>;
+using Duration = std::chrono::nanoseconds;
+
 // Class to keep track of computation time
 class Timer {
  public:
-  typedef std::chrono::time_point<std::chrono::steady_clock, std::chrono::nanoseconds> TimePoint;
-  typedef std::chrono::nanoseconds Duration;
 
   static std::chrono::milliseconds ToMilliseconds(Duration duration) {
     return std::chrono::duration_cast<std::chrono::milliseconds>(duration);

@@ -5,23 +5,23 @@
 
 namespace PathPlanning {
 
-using Trajectory = std::vector<std::vector<double>>;
-
 struct Frenet {
   std::vector<double> s;
   std::vector<double> d;
 };
 
+using FTrajectory = std::vector<Frenet>;
+
 class TrajectoryGenerator {
  private:
-  double dt;
+  double step_dt;
   std::vector<double> JMT(const std::vector<double> &start, const std::vector<double> &target, double T);
 
  public:
-  TrajectoryGenerator(double dt);
+  TrajectoryGenerator(double step_dt);
   ~TrajectoryGenerator(){};
 
-  Trajectory Generate(const Frenet &start, const Frenet &target, size_t steps);
+  FTrajectory Generate(const Frenet &start, const Frenet &target, size_t steps);
 };
 
 }  // namespace PathPlanning

@@ -32,9 +32,16 @@ void SendMessage(uWS::WebSocket<uWS::SERVER> &ws, std::string msg) {
 void ProcessTelemetry(uWS::WebSocket<uWS::SERVER> &ws, PathPlanning::PathPlanner &pathPlanner,
                       PathPlanning::Timer &timer, json &telemetry) {
   // Updates the state of the planner using the data from the telemetry
+  PathPlanning::TimePoint update_s = timer.Start();
+
   pathPlanner.Update(telemetry);
-  
+
+  PathPlanning::Duration update_d = timer.Eval(update_s);
+
   PathPlanning::Trajectory trajectory = pathPlanner.getGlobalCoordTrajectory();
+
+  std::cout << "Time: " << PathPlanning::Timer::ToMilliseconds(update_d).count() << " ms" << std::endl;
+  std::cout << "Avg Time: " << PathPlanning::Timer::ToMilliseconds(timer.AverageDuration()).count() << " ms" << std::endl;
 
   json msgJson;
 

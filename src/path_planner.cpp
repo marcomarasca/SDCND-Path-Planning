@@ -2,8 +2,8 @@
 #include <set>
 #include "utils.h"
 
-PathPlanning::PathPlanner::PathPlanner(Map &map, size_t steps)
-    : map(map), steps(steps), behavior_planner(map, this->ego), trajectory_generator(PATH_DT) {}
+PathPlanning::PathPlanner::PathPlanner(Map &map)
+    : map(map), behavior_planner(map, this->ego), trajectory_generator(TRAJECTORY_STEP_DT) {}
 
 void PathPlanning::PathPlanner::Update(const json &telemetry) {
   this->UpdateEgo(telemetry);
@@ -25,29 +25,35 @@ void PathPlanning::PathPlanner::UpdateEgo(const json &telemetry) {
 
   std::cout << "Prev Path: " << steps_to_go << std::endl;
   std::cout << "Steps Consumed: " << steps_consumed << std::endl;
-  std::cout << "Telemetry: " << s << ", " << d << std::endl;
+  std::cout << "Telemetry: " << s << ", " << d << ", " << telemetry["speed"] << std::endl;
 
   // If there is a previous trajectory uses the s and d computed previously
-  if (steps_to_go > 0 && steps_consumed > 0) {
+  if (steps_consumed > 0) {
     size_t trajectory_idx = steps_consumed - 1;
+    Frenet trajectory_step = this->f_trajectory[trajectory_idx];
 
-    s = this->f_trajectory[trajectory_idx][0];
-    d = this->f_trajectory[trajectory_idx][1];
+    s = trajectory_step.s[0];
+    s_v = trajectory_step.s[1];
+    s_a = trajectory_step.s[2];
+
+    d = trajectory_step.d[0];
+    d_v = trajectory_step.d[1];
+    d_a = trajectory_step.d[2];
 
     // Computes velocity and accelerations components from previous paths
-    double prev_s, prev_s_v, prev_d, prev_d_v;
+    /*double prev_s, prev_s_v, prev_d, prev_d_v;
 
     if (trajectory_idx == 0) {
       prev_s = this->ego.s;
       prev_d = this->ego.d;
-      s_v = (s - prev_s) / PATH_DT;
-      d_v = (d - prev_d) / PATH_DT;
+      s_v = (s - prev_s) / TRAJECTORY_STEP_DT;
+      d_v = (d - prev_d) / TRAJECTORY_STEP_DT;
     } else {
-      prev_s = this->f_trajectory[trajectory_idx - 1][0];
-      prev_d = this->f_trajectory[trajectory_idx - 1][1];
-      s_v = (s - prev_s) / PATH_DT;
-      d_v = (d - prev_d) / PATH_DT;
-    }
+      prev_s = this->f_trajectory[trajectory_idx - 1].s[0];
+      prev_d = this->f_trajectory[trajectory_idx - 1].d[1];
+      s_v = (s - prev_s) / TRAJECTORY_STEP_DT;
+      d_v = (d - prev_d) / TRAJECTORY_STEP_DT;
+    }*/
   }
 
   this->ego.UpdatePosition(s, d);
@@ -100,7 +106,7 @@ void PathPlanning::PathPlanner::UpdateTrajectory() {
   PathPlanning::Frenet start = {{this->ego.s, this->ego.s_v, this->ego.s_a},
                                 {this->ego.d, this->ego.d_v, this->ego.d_a}};
 
-  PathPlanning::Frenet target = {{this->ego.s + 5, 5, 0.0}, {this->ego.d, 0.0, 0.0}};
+  PathPlanning::Frenet target = ComputeTarget(start, ego.lane);
 
   std::cout << "Start:" << std::endl;
   std::cout << "S: " << start.s[0] << " - " << start.s[1] << " - " << start.s[2] << std::endl;
@@ -110,9 +116,25 @@ void PathPlanning::PathPlanner::UpdateTrajectory() {
   std::cout << "S: " << target.s[0] << " - " << target.s[1] << " - " << target.s[2] << std::endl;
   std::cout << "D: " << target.d[0] << " - " << target.d[1] << " - " << target.d[2] << std::endl;
 
-  this->f_trajectory = this->trajectory_generator.Generate(start, target, steps);
+  this->f_trajectory = this->trajectory_generator.Generate(start, target, TRAJECTORY_STEPS);
 
   std::cout << std::endl;
+}
+
+PathPlanning::Frenet PathPlanning::PathPlanner::ComputeTarget(PathPlanning::Frenet &start, int target_lane) {
+  // Velocity: v1 + a * t
+  double s_v = std::min(MAX_SPEED, start.s[1] + MAX_ACC * TRAJECTORT_T);
+  // Acceleration: (v2 - v1) / t
+  double projected_a = (s_v - start.s[1]) / TRAJECTORT_T;
+  // Constant acceleration: s1 + v1 * t + 0.5 * a * t^2
+  double s = Map::WrapDistance(start.s[0] + start.s[1] * TRAJECTORT_T + 0.5 * projected_a * std::pow(TRAJECTORT_T, 2));
+  double s_a = 0.0;
+
+  double d = this->ego.d;  // TODO Map::LaneDisplacement(target_lane);
+  double d_v = 0.0;
+  double d_a = 0.0;
+
+  return {{s, s_v, s_a}, {d, d_v, d_a}};
 }
 
 PathPlanning::Trajectory PathPlanning::PathPlanner::getGlobalCoordTrajectory() {
@@ -120,8 +142,8 @@ PathPlanning::Trajectory PathPlanning::PathPlanner::getGlobalCoordTrajectory() {
   std::vector<double> next_y_vals;
 
   for (auto step : this->f_trajectory) {
-    double s = step[0];
-    double d = step[1];
+    double s = step.s[0];
+    double d = step.d[0];
     auto coord = this->map.FrenetToCartesian(s, d);
 
     next_x_vals.emplace_back(coord[0]);
