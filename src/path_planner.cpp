@@ -3,11 +3,11 @@
 #include "utils.h"
 
 PathPlanning::PathPlanner::PathPlanner(Map &map)
-    : map(map), behavior_planner(map, this->ego), trajectory_generator(TRAJECTORY_STEP_DT) {}
+    : map(map), lanes_traffic(LANES_N), trajectory_generator(TRAJECTORY_STEP_DT) {}
 
 void PathPlanning::PathPlanner::Update(const json &telemetry) {
   this->UpdateEgo(telemetry);
-  this->UpdateVehicles(telemetry);
+  this->UpdateTraffic(telemetry);
   this->UpdateTrajectory();
 }
 
@@ -74,11 +74,11 @@ void PathPlanning::PathPlanner::UpdateEgo(const json &telemetry) {
   // this->ego.UpdateAcceleration(s_a, d_a);
 }
 
-void PathPlanning::PathPlanner::UpdateVehicles(const json &telemetry) {
+void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
   // Sensor Fusion Data, a list of all other cars on the same side of the road.
   auto sensor_fusion = telemetry["sensor_fusion"];
 
-  std::set<int> sensed_vehicles;
+  std::vector<std::set<size_t>> sensed_vehicles{3};
   // Reads sensor fusion data and maps it to the current vehicles
   // id, x, y, vx, vy, s, d,
   for (std::vector<double> vehicle_telemetry : sensor_fusion) {
@@ -90,32 +90,45 @@ void PathPlanning::PathPlanner::UpdateVehicles(const json &telemetry) {
       continue;
     }
 
+    if (std::abs(s_p - this->ego.s.p) > SENSOR_RADIUS) {  // Vehicle out of sensor reach
+      continue;
+    }
+
     // TODO velocity?
     State s{s_p, 0.0, 0.0};
     State d{d_p, 0.0, 0.0};
 
-    auto it = this->vehicles.find(id);
+    size_t lane = Map::LaneIndex(d.p);
 
-    if (it == this->vehicles.end()) { // new vehicle
+    auto &lane_traffic = this->lanes_traffic[lane];
+
+    auto it = lane_traffic.find(id);
+
+    if (it == lane_traffic.end()) {  // new vehicle
       Vehicle vehicle{id, s, d};
-      this->vehicles.emplace(id, vehicle);
+      lane_traffic.emplace(id, vehicle);
     } else {
       it->second.UpdateState(s, d);
     }
-
-    sensed_vehicles.emplace(id);
+    sensed_vehicles[lane].emplace(id);
   }
 
-  // Removes vehicles that are not sensed anymore
-  for (auto it = this->vehicles.cbegin(); it != this->vehicles.cend();) {
-    int id = it->first;
-    if (sensed_vehicles.find(id) == sensed_vehicles.end()) {
-      it = this->vehicles.erase(it);
-    } else {
-      ++it;
+  // Clean up the vehicles out of reach
+  for (size_t lane = 0; lane < this->lanes_traffic.size(); ++lane) {
+    auto &lane_traffic = this->lanes_traffic[lane];
+    for (auto it = lane_traffic.cbegin(); it != lane_traffic.cend();) {
+      size_t id = it->first;
+      if (sensed_vehicles[lane].find(id) == sensed_vehicles[lane].end()) {
+        it = lane_traffic.erase(it);
+      } else {
+        ++it;
+      }
     }
   }
-  std::cout << "Sensed Vehicles: " << this->vehicles.size() << std::endl;
+
+  for (size_t i = 0; i < this->lanes_traffic.size(); ++i) {
+    std::cout << "Lane " << i << " traffic: " << lanes_traffic[i].size() << std::endl;
+  }
 }
 
 void PathPlanning::PathPlanner::UpdateTrajectory() {

@@ -12,6 +12,8 @@ namespace PathPlanning {
 const double MAP_MAX_S = 6945.554;
 // Lane width in meters
 const double LANE_WIDTH = 4.0;
+// Number of availble lanes
+const size_t LANES_N = 3;
 
 class Map {
  private:
