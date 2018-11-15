@@ -15,26 +15,27 @@ PathPlanning::FTrajectory PathPlanning::TrajectoryGenerator::Generate(const Fren
   std::cout << "Generating trajectory for t: " << T << "s (" << steps << " steps)" << std::endl;
 
   // Computes the trajectory coefficients
-  std::vector<double> s_coeff = this->JMT(start.s, target.s, T);
-  std::vector<double> d_coeff = this->JMT(start.d, target.d, T);
+  Coeff s_p_coeff = this->MinimizeJerk(start.s, target.s, T);
+  Coeff s_v_coeff = this->Differentiate(s_p_coeff);
+  Coeff s_a_coeff = this->Differentiate(s_v_coeff);
+
+  Coeff d_p_coeff = this->MinimizeJerk(start.d, target.d, T);
+  Coeff d_v_coeff = this->Differentiate(d_p_coeff);
+  Coeff d_a_coeff = this->Differentiate(d_v_coeff);
 
   PathPlanning::FTrajectory trajectory;
 
   // Computes the values for each step of the trajectory
   for (size_t i = 1; i <= steps; ++i) {
     const double t = i * step_dt;
-    const double t_2 = t * t;
-    const double t_3 = t * t_2;
-    const double t_4 = t * t_3;
-    const double t_5 = t * t_4;
 
-    const double s_p = s_coeff[0] + s_coeff[1] * t + s_coeff[2] * t_2 + s_coeff[3] * t_3 + s_coeff[4] * t_4 + s_coeff[5] * t_5;
-    const double s_v = s_coeff[1] + 2.0 * s_coeff[2] * t + 3 * s_coeff[3] * t_2 + 4 * s_coeff[4] * t_3 + 5 * s_coeff[5] * t_4;
-    const double s_a = 2.0 * s_coeff[2] + 6 * s_coeff[3] * t + 12 * s_coeff[4] * t_2 + 20 * s_coeff[5] * t_3;
+    const double s_p = Eval(t, s_p_coeff);
+    const double s_v = Eval(t, s_v_coeff);
+    const double s_a = Eval(t, s_a_coeff);
 
-    const double d_p = d_coeff[0] + d_coeff[1] * t + d_coeff[2] * t_2 + d_coeff[3] * t_3 + d_coeff[4] * t_4 + d_coeff[5] * t_5;
-    const double d_v = d_coeff[1] + 2.0 * d_coeff[2] * t + 3 * d_coeff[3] * t_2 + 4 * d_coeff[4] * t_3 + 5 * d_coeff[5] * t_4;
-    const double d_a = 2.0 * d_coeff[2] + 6 * d_coeff[3] * t + 12 * d_coeff[4] * t_2 + 20 * d_coeff[5] * t_3;
+    const double d_p = Eval(t, d_p_coeff);
+    const double d_v = Eval(t, d_v_coeff);
+    const double d_a = Eval(t, d_a_coeff);
 
     State s{s_p, s_v, s_a};
     State d{d_p, d_v, d_a};
@@ -59,7 +60,23 @@ PathPlanning::FTrajectory PathPlanning::TrajectoryGenerator::Predict(const Frene
   return trajectory;
 }
 
-PathPlanning::Coeff PathPlanning::TrajectoryGenerator::JMT(const State &start,
+PathPlanning::Coeff PathPlanning::TrajectoryGenerator::Differentiate(const Coeff &coefficients) {
+  Coeff result(coefficients.size() - 1);
+  for (size_t i = 1; i < coefficients.size(); ++i) {
+    result[i - 1] = i * coefficients[i];
+  }
+  return result;
+}
+
+double PathPlanning::TrajectoryGenerator::Eval(double x, const Coeff &coefficients) {
+  double y = 0;
+  for (size_t i = 0; i < coefficients.size(); ++i) {
+    y += coefficients[i] * std::pow(x, i);
+  }
+  return y;
+}
+
+PathPlanning::Coeff PathPlanning::TrajectoryGenerator::MinimizeJerk(const State &start,
                                                            const State &target, double T) {
   const double T_2 = T * T;
   const double T_3 = T * T_2;

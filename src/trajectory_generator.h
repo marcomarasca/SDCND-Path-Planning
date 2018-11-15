@@ -19,7 +19,9 @@ using FTrajectory = std::vector<Frenet>;
 class TrajectoryGenerator {
  private:
   double step_dt;
-  Coeff JMT(const State &start, const State &target, double T);
+  Coeff MinimizeJerk(const State &start, const State &target, double T);
+  Coeff Differentiate(const Coeff &coefficients);
+  double Eval(double x, const Coeff &coefficients);
 
  public:
   TrajectoryGenerator(double step_dt);
