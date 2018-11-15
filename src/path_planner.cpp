@@ -83,7 +83,10 @@ void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
   // id, x, y, vx, vy, s, d,
   for (std::vector<double> vehicle_telemetry : sensor_fusion) {
     size_t id = vehicle_telemetry[0];
+    double v_x = vehicle_telemetry[3];
+    double v_y = vehicle_telemetry[4];
     double s_p = vehicle_telemetry[5];
+    double s_v = Distance(0, v_y, v_x, 0);
     double d_p = vehicle_telemetry[6];
 
     if (d_p < 0) {  // Vehicle not on the rendered yet
@@ -94,8 +97,7 @@ void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
       continue;
     }
 
-    // TODO velocity?
-    State s{s_p, 0.0, 0.0};
+    State s{s_p, s_v, 0.0};
     State d{d_p, 0.0, 0.0};
 
     size_t lane = Map::LaneIndex(d.p);
