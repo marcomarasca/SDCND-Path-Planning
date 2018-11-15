@@ -29,14 +29,15 @@ const double SENSOR_RADIUS = 75;
 using json = nlohmann::json;
 using Trajectory = std::vector<std::vector<double>>;
 using Traffic = std::map<size_t, Vehicle>;
+using Predictions = std::map<size_t, FTrajectory>;
 
 class PathPlanner {
  private:
   Map &map;
   Vehicle ego;
-  std::vector<Traffic> lanes_traffic;
   FTrajectory f_trajectory;
-
+  std::vector<Traffic> lanes_traffic;
+  Predictions predictions;
   TrajectoryGenerator trajectory_generator;
 
  public:
@@ -49,9 +50,10 @@ class PathPlanner {
  private:
   void UpdateEgo(const json &telemetry);
   void UpdateTraffic(const json &telemetry);
+  void UpdatePredictions();
   void UpdatePlan();
   void UpdateTrajectory();
-  Frenet ComputeTarget(Frenet &Start, int target_lane);
+  Frenet ComputeTarget(const Frenet &Start, size_t target_lane);
 };
 
 }  // namespace PathPlanning

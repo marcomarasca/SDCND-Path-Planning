@@ -8,6 +8,7 @@ PathPlanning::PathPlanner::PathPlanner(Map &map)
 void PathPlanning::PathPlanner::Update(const json &telemetry) {
   this->UpdateEgo(telemetry);
   this->UpdateTraffic(telemetry);
+  this->UpdatePredictions();
   this->UpdateTrajectory();
 }
 
@@ -129,9 +130,22 @@ void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
   }
 
   for (size_t i = 0; i < this->lanes_traffic.size(); ++i) {
-    std::cout << "Lane " << i << " traffic: " << lanes_traffic[i].size() << std::endl;
+    std::cout << "Lane " << i << " traffic: " << this->lanes_traffic[i].size() << std::endl;
   }
 }
+
+void PathPlanning::PathPlanner::UpdatePredictions() {
+  for (auto lane_traffic : this->lanes_traffic) {
+    for (auto vehicle : lane_traffic) {
+      const FTrajectory prediction =
+          this->trajectory_generator.Predict({vehicle.second.s, vehicle.second.d}, TRAJECTORY_STEPS);
+      const size_t id = vehicle.first;
+      this->predictions[id] = prediction;
+    }
+  }
+}
+
+void PathPlanning::PathPlanner::UpdatePlan() {}
 
 void PathPlanning::PathPlanner::UpdateTrajectory() {
   // TODO behavior planning
@@ -152,7 +166,7 @@ void PathPlanning::PathPlanner::UpdateTrajectory() {
   std::cout << std::endl;
 }
 
-PathPlanning::Frenet PathPlanning::PathPlanner::ComputeTarget(PathPlanning::Frenet &start, int target_lane) {
+PathPlanning::Frenet PathPlanning::PathPlanner::ComputeTarget(const PathPlanning::Frenet &start, size_t target_lane) {
   // Velocity: v1 + a * t
   double s_v = std::min(MAX_SPEED, start.s.v + MAX_ACC * TRAJECTORT_T);
   // Acceleration: (v2 - v1) / t

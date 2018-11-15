@@ -63,10 +63,10 @@ void PathPlanning::Map::LoadWaypoints(std::string file_path) {
   waypoints_dx.emplace_back(dx0);
   waypoints_dy.emplace_back(dy0);
 
-  spline_x.set_points(waypoints_s, waypoints_x);
-  spline_y.set_points(waypoints_s, waypoints_y);
-  spline_dx.set_points(waypoints_s, waypoints_dx);
-  spline_dy.set_points(waypoints_s, waypoints_dy);
+  this->spline_x.set_points(waypoints_s, waypoints_x);
+  this->spline_y.set_points(waypoints_s, waypoints_y);
+  this->spline_dx.set_points(waypoints_s, waypoints_dx);
+  this->spline_dy.set_points(waypoints_s, waypoints_dy);
 }
 
 // Transform from Frenet s,d coordinates to Cartesian x,y

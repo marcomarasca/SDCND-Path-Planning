@@ -26,6 +26,7 @@ class TrajectoryGenerator {
   ~TrajectoryGenerator(){};
 
   FTrajectory Generate(const Frenet &start, const Frenet &target, size_t steps);
+  FTrajectory Predict(const Frenet &state, size_t steps);
 };
 
 }  // namespace PathPlanning

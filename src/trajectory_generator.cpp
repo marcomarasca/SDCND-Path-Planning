@@ -45,7 +45,21 @@ PathPlanning::FTrajectory PathPlanning::TrajectoryGenerator::Generate(const Fren
   return trajectory;
 }
 
-std::vector<double> PathPlanning::TrajectoryGenerator::JMT(const State &start,
+PathPlanning::FTrajectory PathPlanning::TrajectoryGenerator::Predict(const Frenet &state, size_t steps) {
+  FTrajectory trajectory;
+  trajectory.emplace_back(state.s, state.d);
+  for (size_t i = 1; i <= steps; ++i) {
+    const double t = i * step_dt;
+    const double t_2 = t * t;
+    const double s_p = state.s.p + state.s.v * t + 0.5 * state.s.a * t_2;
+    State s{s_p, state.s.v, state.s.a};
+    State d{state.d};
+    trajectory.emplace_back(s, d);
+  }
+  return trajectory;
+}
+
+PathPlanning::Coeff PathPlanning::TrajectoryGenerator::JMT(const State &start,
                                                            const State &target, double T) {
   const double T_2 = T * T;
   const double T_3 = T * T_2;
