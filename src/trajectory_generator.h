@@ -6,29 +6,20 @@
 
 namespace PathPlanning {
 
-struct Frenet {
-  State s;
-  State d;
-
-  Frenet(const State &s, const State &d) : s(s), d(d){};
-};
-
 using Coeff = std::vector<double>;
-using FTrajectory = std::vector<Frenet>;
 
 class TrajectoryGenerator {
  private:
-  double step_dt;
-  Coeff MinimizeJerk(const State &start, const State &target, double T);
-  Coeff Differentiate(const Coeff &coefficients);
-  double Eval(double x, const Coeff &coefficients);
+  const double step_dt;
+  Coeff MinimizeJerk(const State &start, const State &target, double T) const;
+  Coeff Differentiate(const Coeff &coefficients) const;
+  double Eval(double x, const Coeff &coefficients) const;
 
  public:
   TrajectoryGenerator(double step_dt);
   ~TrajectoryGenerator(){};
 
-  FTrajectory Generate(const Frenet &start, const Frenet &target, size_t steps);
-  FTrajectory Predict(const Frenet &state, size_t steps);
+  FTrajectory Generate(const Frenet &start, const Frenet &target, size_t steps) const;
 };
 
 }  // namespace PathPlanning

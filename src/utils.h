@@ -3,6 +3,7 @@
 
 #include <math.h>
 #include <chrono>
+#include <vector>
 
 // for portability of M_PI (Vis Studio, MinGW, etc.)
 #ifndef M_PI
@@ -23,6 +24,14 @@ struct State {
   State(double p, double v, double a) : p(p), v(v), a(a){};
 };
 
+struct Frenet {
+  State s;
+  State d;
+  Frenet(){};
+  Frenet(const State &s, const State &d) : s(s), d(d){};
+};
+
+using FTrajectory = std::vector<Frenet>;
 using TimePoint = std::chrono::time_point<std::chrono::steady_clock, std::chrono::nanoseconds>;
 using Duration = std::chrono::nanoseconds;
 

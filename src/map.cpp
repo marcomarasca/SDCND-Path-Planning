@@ -72,7 +72,7 @@ void PathPlanning::Map::LoadWaypoints(std::string file_path) {
 /**
  * Transform from Frenet s,d coordinates to Cartesian x,y
  */
-PathPlanning::Coord PathPlanning::Map::FrenetToCartesian(double s, double d) {
+PathPlanning::Pair PathPlanning::Map::FrenetToCartesian(double s, double d) const {
   const double s_w = WrapDistance(s);
 
   const double x = this->spline_x(s_w) + this->spline_dx(s_w) * d;
@@ -81,7 +81,7 @@ PathPlanning::Coord PathPlanning::Map::FrenetToCartesian(double s, double d) {
   return {x, y};
 }
 
-std::pair<double, double> PathPlanning::Map::FrenetVelocity(double s, double d, double v_x, double v_y) {
+PathPlanning::Pair PathPlanning::Map::FrenetVelocity(double s, double d, double v_x, double v_y) const {
   const double road_angle = this->RoadAngle(s);
   const double v_angle = Angle(v_x, v_y);
   const double v = Distance(0, 0, v_x, v_y);
@@ -93,7 +93,7 @@ std::pair<double, double> PathPlanning::Map::FrenetVelocity(double s, double d, 
   return {s_v, d_v};
 }
 
-double PathPlanning::Map::RoadAngle(double s) {
+double PathPlanning::Map::RoadAngle(double s) const {
   const double s_w = WrapDistance(s);
 
   // This is equivalent to take a small s increment and compute the delta

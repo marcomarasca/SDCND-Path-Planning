@@ -7,21 +7,26 @@ namespace PathPlanning {
 
 const size_t EGO_ID = -1;
 
+// Vehicle length in meters
+const double VEHICLE_LENGTH = 5.0;
+
 class Vehicle {
  public:
+  static bool SComparator(const Vehicle &first, const Vehicle &second) { return first.state.s.p < second.state.s.p; };
+
   size_t id;
-  State s;
-  State d;
+  Frenet state;
+  FTrajectory trajectory;
   size_t lane;
 
- public:
   Vehicle(size_t id = EGO_ID);
-  Vehicle(size_t id, const State &s, const State &d);
+  Vehicle(size_t id, const Frenet &state);
   ~Vehicle(){};
 
-  void UpdateState(const State &s, const State &d);
-
-  static bool SComparator(const Vehicle &first, const Vehicle &second) { return first.s.p < second.s.p; };
+  void UpdateState(const Frenet &state);
+  void UpdateTrajectory(const FTrajectory &trajectory);
+  void PredictTrajectory(size_t steps, double step_dt);
+  Frenet StateAt(double t) const;
 };
 
 }  // namespace PathPlanning

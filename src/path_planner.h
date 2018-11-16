@@ -25,27 +25,27 @@ const double MIN_SPEED = Mph2ms(15);
 const double MAX_ACC = 10;
 // Ego vehicle range in meters for vehicles detection (in front and behind)
 const double RANGE = 75;
+// Min distance to front vehicle, TODO should be paremeterized by velocity
+const double SAFE_DISTANCE = VEHICLE_LENGTH * 3;
 
 using json = nlohmann::json;
 using Trajectory = std::vector<std::vector<double>>;
 using Traffic = std::vector<Vehicle>;
-using Predictions = std::map<size_t, FTrajectory>;
 
 class PathPlanner {
  private:
-  Map &map;
+  const Map &map;
   Vehicle ego;
   FTrajectory f_trajectory;
   std::vector<Traffic> lanes_traffic;
-  Predictions predictions;
-  TrajectoryGenerator trajectory_generator;
+  const TrajectoryGenerator trajectory_generator;
 
  public:
   PathPlanner(Map &map);
   ~PathPlanner(){};
 
   void Update(const json &telemetry);
-  Trajectory getGlobalCoordTrajectory();
+  Trajectory getGlobalCoordTrajectory() const;
 
  private:
   void UpdateEgo(const json &telemetry);
@@ -54,9 +54,9 @@ class PathPlanner {
   void UpdatePlan();
   void UpdateTrajectory();
 
-  bool VehicleAhead(Vehicle &vehicle);
-
-  Frenet ComputeTarget(const Frenet &Start, size_t target_lane);
+  FTrajectory PredictTrajectory(const Vehicle &vehicle, size_t steps) const;
+  Frenet GetTarget(size_t lane, double t) const;
+  bool VehicleAhead(size_t lane, Vehicle &vehicle) const;
 };
 
 }  // namespace PathPlanning
