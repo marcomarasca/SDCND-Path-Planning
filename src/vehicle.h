@@ -20,6 +20,8 @@ class Vehicle {
   ~Vehicle(){};
 
   void UpdateState(const State &s, const State &d);
+
+  static bool SComparator(const Vehicle &first, const Vehicle &second) { return first.s.p < second.s.p; };
 };
 
 }  // namespace PathPlanning

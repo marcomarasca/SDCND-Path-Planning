@@ -1,4 +1,5 @@
 #include "path_planner.h"
+#include <algorithm>
 #include <set>
 #include "utils.h"
 
@@ -9,6 +10,7 @@ void PathPlanning::PathPlanner::Update(const json &telemetry) {
   this->UpdateEgo(telemetry);
   this->UpdateTraffic(telemetry);
   this->UpdatePredictions();
+  this->UpdatePlan();
   this->UpdateTrajectory();
 }
 
@@ -79,7 +81,8 @@ void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
   // Sensor Fusion Data, a list of all other cars on the same side of the road.
   auto sensor_fusion = telemetry["sensor_fusion"];
 
-  std::vector<std::set<size_t>> sensed_vehicles{3};
+  std::vector<Traffic> lanes_traffic(LANES_N);
+
   // Reads sensor fusion data and maps it to the current vehicles
   // id, x, y, vx, vy, s, d,
   for (std::vector<double> vehicle_telemetry : sensor_fusion) {
@@ -105,50 +108,53 @@ void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
     State d{d_p, frenet_v.second, 0.0};
 
     size_t lane = Map::LaneIndex(d.p);
-
-    auto &lane_traffic = this->lanes_traffic[lane];
-
-    auto it = lane_traffic.find(id);
-
-    if (it == lane_traffic.end()) {  // new vehicle
-      Vehicle vehicle{id, s, d};
-      lane_traffic.emplace(id, vehicle);
-    } else {
-      it->second.UpdateState(s, d);
-    }
-    sensed_vehicles[lane].emplace(id);
+    lanes_traffic[lane].emplace_back(id, s, d);
   }
 
-  // Clean up the vehicles out of reach
-  for (size_t lane = 0; lane < this->lanes_traffic.size(); ++lane) {
-    auto &lane_traffic = this->lanes_traffic[lane];
-    for (auto it = lane_traffic.cbegin(); it != lane_traffic.cend();) {
-      size_t id = it->first;
-      if (sensed_vehicles[lane].find(id) == sensed_vehicles[lane].end()) {
-        it = lane_traffic.erase(it);
-      } else {
-        ++it;
-      }
-    }
-  }
+  this->lanes_traffic = lanes_traffic;
 
   for (size_t i = 0; i < this->lanes_traffic.size(); ++i) {
+    auto &lane_traffic = this->lanes_traffic[i];
+    // Sort the vehicles by s
+    std::sort(lane_traffic.begin(), lane_traffic.end(), Vehicle::SComparator);
     std::cout << "Lane " << i << " traffic: " << this->lanes_traffic[i].size() << std::endl;
+    std::cout << "Sorted Vehicles: ";
+    for (auto vehicle : this->lanes_traffic[i]) {
+      std::cout << vehicle.s.p << " ";
+    }
+    std::cout << std::endl;
   }
 }
 
 void PathPlanning::PathPlanner::UpdatePredictions() {
   for (auto lane_traffic : this->lanes_traffic) {
     for (auto vehicle : lane_traffic) {
-      const FTrajectory prediction =
-          this->trajectory_generator.Predict({vehicle.second.s, vehicle.second.d}, TRAJECTORY_STEPS);
-      const size_t id = vehicle.first;
-      this->predictions[id] = prediction;
+      const FTrajectory prediction = this->trajectory_generator.Predict({vehicle.s, vehicle.d}, TRAJECTORY_STEPS);
+      this->predictions[vehicle.id] = prediction;
     }
   }
 }
 
-void PathPlanning::PathPlanner::UpdatePlan() {}
+void PathPlanning::PathPlanner::UpdatePlan() {
+  // Let us try to stay in the current lane without crashing
+  Vehicle ahead;
+  if (this->VehicleAhead(ahead)) {
+    double distance = ahead.s.p - this->ego.s.p;
+    std::cout << "Vehicle " << ahead.id << " ahead in " << distance << " m (S: " << ahead.s.p << ")" << std::endl;
+  }
+}
+
+bool PathPlanning::PathPlanner::VehicleAhead(Vehicle &vehicle) {
+  size_t lane = this->ego.lane;
+  auto &lane_traffic = this->lanes_traffic[lane];
+  std::cout << std::endl;
+  auto it = std::lower_bound(lane_traffic.begin(), lane_traffic.end(), this->ego, Vehicle::SComparator);
+  if (it != lane_traffic.end()) {
+    vehicle = *it;
+    return true;
+  }
+  return false;
+}
 
 void PathPlanning::PathPlanner::UpdateTrajectory() {
   // TODO behavior planning

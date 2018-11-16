@@ -28,7 +28,7 @@ const double RANGE = 75;
 
 using json = nlohmann::json;
 using Trajectory = std::vector<std::vector<double>>;
-using Traffic = std::map<size_t, Vehicle>;
+using Traffic = std::vector<Vehicle>;
 using Predictions = std::map<size_t, FTrajectory>;
 
 class PathPlanner {
@@ -53,6 +53,9 @@ class PathPlanner {
   void UpdatePredictions();
   void UpdatePlan();
   void UpdateTrajectory();
+
+  bool VehicleAhead(Vehicle &vehicle);
+
   Frenet ComputeTarget(const Frenet &Start, size_t target_lane);
 };
 
