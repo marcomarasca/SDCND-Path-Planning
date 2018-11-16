@@ -3,7 +3,6 @@
 #include <iomanip>
 #include <iostream>
 #include "map.h"
-#include "utils.h"
 
 PathPlanning::Vehicle::Vehicle(size_t id) : id(id), lane(0) {}
 

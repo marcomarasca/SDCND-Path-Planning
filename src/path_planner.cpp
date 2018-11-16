@@ -16,7 +16,7 @@ void PathPlanning::PathPlanner::UpdateEgo(const json &telemetry) {
   const std::size_t steps_to_go = telemetry["previous_path_x"].size();
   const std::size_t steps_consumed = this->f_trajectory.size() - steps_to_go;
 
-  State s{telemetry["s"], 0.0, 0.0};
+  State s{Map::WrapDistance(telemetry["s"]), 0.0, 0.0};
   State d{telemetry["d"], 0.0, 0.0};
 
   std::cout << "Prev Path: " << steps_to_go << std::endl;
@@ -85,7 +85,7 @@ void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
   for (std::vector<double> vehicle_telemetry : sensor_fusion) {
     size_t id = vehicle_telemetry[0];
 
-    double s_p = vehicle_telemetry[5];
+    double s_p = Map::WrapDistance(vehicle_telemetry[5]);
     double d_p = vehicle_telemetry[6];
 
     if (d_p < 0) {  // Vehicle not on the rendered yet
