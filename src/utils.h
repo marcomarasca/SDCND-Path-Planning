@@ -73,6 +73,14 @@ inline double Ms2s(double x) { return x / 1000.0; }
 inline double Mph2ms(double x) { return x * 0.44704; }
 
 /**
+ * Computes the angle between the two components
+ */
+inline double Angle(double d_x, double d_y) {
+  double angle = std::atan2(d_y, d_x);
+  return angle < 0 ? (angle + 2 * M_PI) : angle;
+}
+
+/**
  * Converts degrees to radians
  */
 inline double Deg2rad(double x) { return x * M_PI / 180; }

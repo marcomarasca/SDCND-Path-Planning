@@ -23,8 +23,8 @@ const double MAX_SPEED = Mph2ms(48);
 const double MIN_SPEED = Mph2ms(15);
 // Max acceleration in m/s^2
 const double MAX_ACC = 10;
-// Ego vehicle radius in meters for surrounding vehicle detection
-const double SENSOR_RADIUS = 75;
+// Ego vehicle range in meters for vehicles detection (in front and behind)
+const double RANGE = 75;
 
 using json = nlohmann::json;
 using Trajectory = std::vector<std::vector<double>>;

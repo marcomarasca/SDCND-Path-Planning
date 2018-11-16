@@ -69,12 +69,36 @@ void PathPlanning::Map::LoadWaypoints(std::string file_path) {
   this->spline_dy.set_points(waypoints_s, waypoints_dy);
 }
 
-// Transform from Frenet s,d coordinates to Cartesian x,y
-std::vector<double> PathPlanning::Map::FrenetToCartesian(double s, double d) {
+/**
+ * Transform from Frenet s,d coordinates to Cartesian x,y
+ */
+PathPlanning::Coord PathPlanning::Map::FrenetToCartesian(double s, double d) {
   const double s_w = WrapDistance(s);
 
   const double x = this->spline_x(s_w) + this->spline_dx(s_w) * d;
   const double y = this->spline_y(s_w) + this->spline_dy(s_w) * d;
 
   return {x, y};
+}
+
+std::pair<double, double> PathPlanning::Map::FrenetVelocity(double s, double d, double v_x, double v_y) {
+  const double road_angle = this->RoadAngle(s);
+  const double v_angle = Angle(v_x, v_y);
+  const double v = Distance(0, 0, v_x, v_y);
+  const double angle_diff = v_angle - road_angle;
+
+  const double s_v = std::fabs(v * std::cos(angle_diff));
+  const double d_v = v * std::sin(angle_diff);
+
+  return {s_v, d_v};
+}
+
+double PathPlanning::Map::RoadAngle(double s) {
+  const double s_w = WrapDistance(s);
+
+  // This is equivalent to take a small s increment and compute the delta
+  const double d_x = this->spline_x.deriv(1, s);
+  const double d_y = this->spline_y.deriv(1, s);
+
+  return Angle(d_x, d_y);
 }

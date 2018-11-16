@@ -48,13 +48,15 @@ PathPlanning::FTrajectory PathPlanning::TrajectoryGenerator::Generate(const Fren
 
 PathPlanning::FTrajectory PathPlanning::TrajectoryGenerator::Predict(const Frenet &state, size_t steps) {
   FTrajectory trajectory;
-  trajectory.emplace_back(state.s, state.d);
   for (size_t i = 1; i <= steps; ++i) {
     const double t = i * step_dt;
     const double t_2 = t * t;
     const double s_p = state.s.p + state.s.v * t + 0.5 * state.s.a * t_2;
+    const double s_v = state.s.v + state.s.a * t;
+    const double d_p = state.d.p + state.d.v * t + 0.5 * state.d.a * t_2;
+    const double d_v = state.d.v + state.d.a * t;
     State s{s_p, state.s.v, state.s.a};
-    State d{state.d};
+    State d{d_p, state.d.v, state.d.a};
     trajectory.emplace_back(s, d);
   }
   return trajectory;

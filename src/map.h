@@ -8,6 +8,11 @@
 
 namespace PathPlanning {
 
+struct Coord {
+  double x;
+  double y;
+};
+
 // The max s value before wrapping around the track back to 0
 const double MAP_MAX_S = 6945.554;
 // Lane width in meters
@@ -22,6 +27,8 @@ class Map {
   tk::spline spline_dx;
   tk::spline spline_dy;
 
+  double RoadAngle(double s);
+
  public:
   static size_t LaneIndex(double d);
   static double LaneDisplacement(size_t lane_index);
@@ -30,7 +37,8 @@ class Map {
   Map();
   ~Map(){};
   void LoadWaypoints(std::string file_path);
-  std::vector<double> FrenetToCartesian(double s, double d);
+  Coord FrenetToCartesian(double s, double d);
+  std::pair<double, double> FrenetVelocity(double s, double d, double v_x, double v_y);
 };
 
 }  // namespace PathPlanning

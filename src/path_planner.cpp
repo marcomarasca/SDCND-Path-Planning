@@ -84,22 +84,25 @@ void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
   // id, x, y, vx, vy, s, d,
   for (std::vector<double> vehicle_telemetry : sensor_fusion) {
     size_t id = vehicle_telemetry[0];
-    double v_x = vehicle_telemetry[3];
-    double v_y = vehicle_telemetry[4];
+
     double s_p = vehicle_telemetry[5];
-    double s_v = Distance(0, v_y, v_x, 0);
     double d_p = vehicle_telemetry[6];
 
     if (d_p < 0) {  // Vehicle not on the rendered yet
       continue;
     }
 
-    if (std::abs(s_p - this->ego.s.p) > SENSOR_RADIUS) {  // Vehicle out of sensor reach
+    if (std::fabs(s_p - this->ego.s.p) > RANGE) {  // Vehicle out of sensor reach
       continue;
     }
 
-    State s{s_p, s_v, 0.0};
-    State d{d_p, 0.0, 0.0};
+    double v_x = vehicle_telemetry[3];
+    double v_y = vehicle_telemetry[4];
+
+    auto frenet_v = this->map.FrenetVelocity(s_p, d_p, v_x, v_y);
+
+    State s{s_p, frenet_v.first, 0.0};
+    State d{d_p, frenet_v.second, 0.0};
 
     size_t lane = Map::LaneIndex(d.p);
 
@@ -194,8 +197,8 @@ PathPlanning::Trajectory PathPlanning::PathPlanner::getGlobalCoordTrajectory() {
     double d = step.d.p;
     auto coord = this->map.FrenetToCartesian(s, d);
 
-    next_x_vals.emplace_back(coord[0]);
-    next_y_vals.emplace_back(coord[1]);
+    next_x_vals.emplace_back(coord.x);
+    next_y_vals.emplace_back(coord.y);
   }
 
   return Trajectory({next_x_vals, next_y_vals});
