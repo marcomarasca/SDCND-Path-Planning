@@ -29,16 +29,16 @@ void SendMessage(uWS::WebSocket<uWS::SERVER> &ws, std::string msg) {
   ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
 }
 
-void ProcessTelemetry(uWS::WebSocket<uWS::SERVER> &ws, PathPlanning::PathPlanner &pathPlanner,
-                      PathPlanning::Timer &timer, json &telemetry) {
+void ProcessTelemetry(uWS::WebSocket<uWS::SERVER> &ws, PathPlanning::PathPlanner &planner, PathPlanning::Timer &timer,
+                      json &telemetry) {
   // Updates the state of the planner using the data from the telemetry
   PathPlanning::TimePoint update_s = timer.Start();
 
-  pathPlanner.Update(telemetry);
+  planner.Update(telemetry);
 
   PathPlanning::Duration update_d = timer.Eval(update_s);
 
-  PathPlanning::Trajectory trajectory = pathPlanner.getGlobalCoordTrajectory();
+  PathPlanning::Trajectory trajectory = planner.getGlobalCoordTrajectory();
 
   std::cout << "Time: " << PathPlanning::Timer::ToMilliseconds(update_d).count() << " ms" << std::endl;
   std::cout << "Avg Time: " << PathPlanning::Timer::ToMilliseconds(timer.AverageDuration()).count() << " ms"
@@ -46,8 +46,8 @@ void ProcessTelemetry(uWS::WebSocket<uWS::SERVER> &ws, PathPlanning::PathPlanner
 
   json msgJson;
 
-  msgJson["next_x"] = trajectory[0];
-  msgJson["next_y"] = trajectory[1];
+  msgJson["next_x"] = trajectory.first;
+  msgJson["next_y"] = trajectory.second;
 
   auto msg = "42[\"control\"," + msgJson.dump() + "]";
 
@@ -57,28 +57,27 @@ void ProcessTelemetry(uWS::WebSocket<uWS::SERVER> &ws, PathPlanning::PathPlanner
 void StartServer(PathPlanning::Map &map) {
   uWS::Hub h;
   PathPlanning::Timer timer;
-  PathPlanning::PathPlanner pathPlanner{map};
+  PathPlanning::PathPlanner planner{map, PathPlanning::LANES_N};
 
-  h.onMessage(
-      [&map, &pathPlanner, &timer](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
-        // "42" at the start of the message means there's a websocket message event.
-        // The 4 signifies a websocket message
-        // The 2 signifies a websocket event
-        // std::string sdata = std::string(data).substr(0, length);
-        if (length && length > 2 && data[0] == '4' && data[1] == '2') {
-          std::string message = HasData(data);
-          if (message != "") {
-            auto json_obj = json::parse(message);
-            std::string event = json_obj[0].get<std::string>();
-            if (event == "telemetry") {
-              ProcessTelemetry(ws, pathPlanner, timer, json_obj[1]);
-            }
-          } else {
-            // Manual driving
-            SendMessage(ws, "42[\"manual\",{}]");
-          }
+  h.onMessage([&map, &planner, &timer](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+    // "42" at the start of the message means there's a websocket message event.
+    // The 4 signifies a websocket message
+    // The 2 signifies a websocket event
+    // std::string sdata = std::string(data).substr(0, length);
+    if (length && length > 2 && data[0] == '4' && data[1] == '2') {
+      std::string message = HasData(data);
+      if (message != "") {
+        auto json_obj = json::parse(message);
+        std::string event = json_obj[0].get<std::string>();
+        if (event == "telemetry") {
+          ProcessTelemetry(ws, planner, timer, json_obj[1]);
         }
-      });
+      } else {
+        // Manual driving
+        SendMessage(ws, "42[\"manual\",{}]");
+      }
+    }
+  });
 
   // We don't need this since we're not using HTTP but if it's removed the
   // program

@@ -3,8 +3,8 @@
 #include <set>
 #include "utils.h"
 
-PathPlanning::PathPlanner::PathPlanner(Map &map)
-    : map(map), lanes_traffic(LANES_N), trajectory_generator(TRAJECTORY_STEP_DT) {}
+PathPlanning::PathPlanner::PathPlanner(Map &map, size_t lane_n)
+    : map(map), ego(EGO_ID), traffic(lane_n), trajectory_generator(TRAJECTORY_STEP_DT) {}
 
 void PathPlanning::PathPlanner::Update(const json &telemetry) {
   this->UpdateEgo(telemetry);
@@ -41,7 +41,10 @@ void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
   // Sensor Fusion Data, a list of all other cars on the same side of the road.
   auto sensor_fusion = telemetry["sensor_fusion"];
 
-  std::vector<Traffic> lanes_traffic(LANES_N);
+  for (auto &lane : this->traffic) {
+    lane.clear();
+    lane.reserve(sensor_fusion.size() / traffic.size());
+  }
 
   // Reads sensor fusion data and maps it to the current vehicles
   // id, x, y, vx, vy, s, d,
@@ -67,28 +70,19 @@ void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
     Frenet state{{s_p, frenet_v.first, 0.0}, {d_p, frenet_v.second, 0.0}};
 
     size_t lane = Map::LaneIndex(state.d.p);
-    lanes_traffic[lane].emplace_back(id, state);
+    this->traffic[lane].emplace_back(id, state);
   }
 
-  this->lanes_traffic = lanes_traffic;
-
-  for (size_t i = 0; i < this->lanes_traffic.size(); ++i) {
-    auto &lane_traffic = this->lanes_traffic[i];
+  for (auto &lane_traffic : this->traffic) {
     // Sort the vehicles by s
-    // TODO Since the map is circular it mught happen that vehicles past the 0 point are in front but are
-    // here detected as behind..
+    // TODO Since the map is circular it might happen that vehicles past the 0 point are in front but are
+    // here detected as behind, create a comparator that correctly takes this into account
     std::sort(lane_traffic.begin(), lane_traffic.end(), Vehicle::SComparator);
-    std::cout << "Lane " << i << " traffic: " << this->lanes_traffic[i].size() << std::endl;
-    std::cout << "Sorted Vehicles: ";
-    for (auto &vehicle : this->lanes_traffic[i]) {
-      std::cout << vehicle.state.s.p << " ";
-    }
-    std::cout << std::endl;
   }
 }
 
 void PathPlanning::PathPlanner::UpdatePredictions() {
-  for (auto &lane_traffic : this->lanes_traffic) {
+  for (auto &lane_traffic : this->traffic) {
     for (auto &vehicle : lane_traffic) {
       vehicle.PredictTrajectory(TRAJECTORY_STEPS, TRAJECTORY_STEP_DT);
     }
@@ -115,7 +109,7 @@ PathPlanning::Frenet PathPlanning::PathPlanner::GetTarget(size_t lane, double t)
   double s_a = s_v < MAX_SPEED ? acc : 0.0;
 
   // If we have a vehicle ahead adapt the speed to avoid collisions
-  Vehicle ahead;
+  Vehicle ahead(EGO_ID);
   if (this->VehicleAhead(lane, ahead)) {
     const double distance = ahead.state.s.p - this->ego.state.s.p;
     std::cout << "[WARNING]: Vehicle " << ahead.id << " ahead at " << distance << " m" << std::endl;
@@ -138,21 +132,21 @@ PathPlanning::Frenet PathPlanning::PathPlanner::GetTarget(size_t lane, double t)
 }
 
 bool PathPlanning::PathPlanner::VehicleAhead(size_t lane, Vehicle &vehicle) const {
-  auto &lane_traffic = this->lanes_traffic[lane];
-  std::cout << std::endl;
+  auto &lane_traffic = this->traffic[lane];
   auto it = std::lower_bound(lane_traffic.begin(), lane_traffic.end(), this->ego, Vehicle::SComparator);
+  bool found = false;
   if (it != lane_traffic.end()) {
     vehicle = *it;
-    return true;
+    found = true;
   }
-  return false;
+  return found;
 }
 
 void PathPlanning::PathPlanner::UpdateTrajectory() {
   // TODO behavior planning
   PathPlanning::Frenet start = this->ego.state;
 
-  PathPlanning::Frenet target = GetTarget(ego.lane, TRAJECTORY_T);
+  PathPlanning::Frenet target = GetTarget(ego.GetLane(), TRAJECTORY_T);
 
   std::cout << "Start:" << std::endl;
   std::cout << "S: " << start.s.p << " - " << start.s.v << " - " << start.s.a << std::endl;

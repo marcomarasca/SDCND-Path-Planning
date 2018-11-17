@@ -1,17 +1,19 @@
 #ifndef PP_PATH_PLANNER_H
 #define PP_PATH_PLANNER_H
 
+#include <array>
 #include <map>
 #include <vector>
 
 #include "json.hpp"
 
 #include "map.h"
-#include "vehicle.h"
 #include "trajectory_generator.h"
+#include "vehicle.h"
 
 namespace PathPlanning {
-
+// Id of the ego vehicle
+const size_t EGO_ID = -1;
 // Total time in seconds for the trajectory
 const double TRAJECTORY_T = 1.5;
 // Delta t between trajectory points in seconds (same as simulator controller update rate)
@@ -30,18 +32,19 @@ const double RANGE = 75;
 const double SAFE_DISTANCE = VEHICLE_LENGTH * 3;
 
 using json = nlohmann::json;
-using Trajectory = std::vector<std::vector<double>>;
-using Traffic = std::vector<Vehicle>;
+using Trajectory = std::pair<std::vector<double>, std::vector<double>>;
+using LaneTraffic = std::vector<Vehicle>;
+using Traffic = std::vector<LaneTraffic>;
 
 class PathPlanner {
  private:
   const Map &map;
   Vehicle ego;
-  std::vector<Traffic> lanes_traffic;
+  Traffic traffic;
   const TrajectoryGenerator trajectory_generator;
 
  public:
-  PathPlanner(Map &map);
+  PathPlanner(Map &map, size_t lane_n);
   ~PathPlanner(){};
 
   void Update(const json &telemetry);
