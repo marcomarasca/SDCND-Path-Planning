@@ -10,7 +10,7 @@ const double VEHICLE_LENGTH = 5.0;
 
 class Vehicle {
  public:
-  static bool SComparator(const Vehicle &first, const Vehicle &second) { return first.state.s.p < second.state.s.p; };
+  static bool SComparator(const Vehicle &first, const Vehicle &second);
 
   size_t id;
   Frenet state;
@@ -26,7 +26,6 @@ class Vehicle {
   void UpdateState(const Frenet &state);
   void UpdateTrajectory(const FTrajectory &trajectory);
   void PredictTrajectory(size_t steps, double step_dt);
-  
 };
 
 }  // namespace PathPlanning

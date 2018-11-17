@@ -1,6 +1,10 @@
 #include "vehicle.h"
 #include "map.h"
 
+bool PathPlanning::Vehicle::SComparator(const Vehicle &first, const Vehicle &second) {
+  return first.state.s.p < second.state.s.p;
+}
+
 PathPlanning::Vehicle::Vehicle(size_t id) : id(id) {}
 
 PathPlanning::Vehicle::Vehicle(size_t id, const Frenet &state) : id(id), state(state) {}
@@ -24,6 +28,7 @@ void PathPlanning::Vehicle::UpdateTrajectory(const PathPlanning::FTrajectory &tr
 
 void PathPlanning::Vehicle::PredictTrajectory(size_t steps, double step_dt) {
   this->trajectory.clear();
+  this->trajectory.reserve(steps);
   for (size_t i = 1; i <= steps; ++i) {
     const double t = i * step_dt;
     this->trajectory.emplace_back(this->StateAt(t));

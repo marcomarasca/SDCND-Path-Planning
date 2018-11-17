@@ -13,7 +13,6 @@ PathPlanning::FTrajectory PathPlanning::TrajectoryGenerator::Generate(const Fren
   const double T = steps * step_dt;
 
   std::cout << "Generating trajectory for t: " << T << "s (" << steps << " steps)" << std::endl;
-
   // Computes the trajectory coefficients
   const Coeff s_p_coeff = this->MinimizeJerk(start.s, target.s, T);
   const Coeff s_v_coeff = this->Differentiate(s_p_coeff);
@@ -24,17 +23,19 @@ PathPlanning::FTrajectory PathPlanning::TrajectoryGenerator::Generate(const Fren
   const Coeff d_a_coeff = this->Differentiate(d_v_coeff);
 
   PathPlanning::FTrajectory trajectory;
-
   // Computes the values for each step of the trajectory
-  for (size_t i = 0; i < steps; ++i) {
+  for (size_t i = 1; i <= steps; ++i) {
     const double t = i * step_dt;
 
     const double s_p = this->Eval(t, s_p_coeff);
     const double s_v = this->Eval(t, s_v_coeff);
     const double s_a = this->Eval(t, s_a_coeff);
+
     const double d_p = this->Eval(t, d_p_coeff);
     const double d_v = this->Eval(t, d_v_coeff);
     const double d_a = this->Eval(t, d_a_coeff);
+
+    // TODO Check for distance constraint violation (e.g. using max accelaration and velocity)
 
     const State s{s_p, s_v, s_a};
     const State d{d_p, d_v, d_a};

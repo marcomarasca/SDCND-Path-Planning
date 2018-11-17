@@ -8,6 +8,14 @@
 size_t PathPlanning::Map::LaneIndex(double d) { return (size_t)(d / PathPlanning::LANE_WIDTH); }
 double PathPlanning::Map::LaneDisplacement(size_t lane_index) { return lane_index * LANE_WIDTH + LANE_WIDTH / 2.0; }
 double PathPlanning::Map::WrapDistance(double s) { return fmod(s, MAP_MAX_S); }
+double PathPlanning::Map::WrapDistanceDiff(double s1, double s2) {
+  // Checks the correct wrapping when comparing distances that are on different side of the circuit
+  // E.g. 4--5--6--0--1--2--3 |-->4
+  // If a s1 is 1 and s2 is 6, then distance should be -2 since the map wraps at 7
+  const double s1_w = WrapDistance(s1 + MAP_MAX_S / 2.0);
+  const double s2_w = WrapDistance(s2 + MAP_MAX_S / 2.0);
+  return s1 - s2;
+}
 
 PathPlanning::Map::Map() {}
 

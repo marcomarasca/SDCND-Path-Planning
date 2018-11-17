@@ -41,14 +41,15 @@ void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
   // Sensor Fusion Data, a list of all other cars on the same side of the road.
   auto sensor_fusion = telemetry["sensor_fusion"];
 
+  // Reserve some space in the lane
   for (auto &lane : this->traffic) {
     lane.clear();
     lane.reserve(sensor_fusion.size() / traffic.size());
   }
 
   // Reads sensor fusion data and maps it to the current vehicles
-  // id, x, y, vx, vy, s, d,
   for (std::vector<double> vehicle_telemetry : sensor_fusion) {
+    // Vehicle telemetry: id, x, y, vx, vy, s, d,
     size_t id = vehicle_telemetry[0];
 
     double s_p = Map::WrapDistance(vehicle_telemetry[5]);
@@ -58,7 +59,7 @@ void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
       continue;
     }
 
-    if (std::fabs(s_p - this->ego.state.s.p) > RANGE) {  // Vehicle out of sensor reach
+    if (std::fabs(Map::WrapDistanceDiff(s_p, this->ego.state.s.p)) > RANGE) {  // Vehicle out of sensor reach
       continue;
     }
 
@@ -111,11 +112,11 @@ PathPlanning::Frenet PathPlanning::PathPlanner::GetTarget(size_t lane, double t)
   // If we have a vehicle ahead adapt the speed to avoid collisions
   Vehicle ahead(EGO_ID);
   if (this->VehicleAhead(lane, ahead)) {
-    const double distance = ahead.state.s.p - this->ego.state.s.p;
+    const double distance = Map::WrapDistanceDiff(ahead.state.s.p, this->ego.state.s.p);
     std::cout << "[WARNING]: Vehicle " << ahead.id << " ahead at " << distance << " m" << std::endl;
     // Computes the distance at time t
     std::cout << ahead.trajectory.size() << std::endl;
-    const double distance_at_t = ahead.trajectory.back().s.p - this->ego.StateAt(t).s.p;
+    const double distance_at_t = Map::WrapDistanceDiff(ahead.trajectory.back().s.p, this->ego.StateAt(t).s.p);
     if (distance_at_t < SAFE_DISTANCE) {
       std::cout << "[WARNING]: Following " << ahead.id << std::endl;
       s_v = std::min(MAX_SPEED, ahead.state.s.v);  // Follow the car ahead

@@ -30,6 +30,7 @@ class Map {
   static size_t LaneIndex(double d);
   static double LaneDisplacement(size_t lane_index);
   static double WrapDistance(double s);
+  static double WrapDistanceDiff(double s1, double s2);
 
   Map();
   ~Map(){};
