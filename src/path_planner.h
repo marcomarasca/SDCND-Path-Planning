@@ -5,18 +5,19 @@
 #include <vector>
 
 #include "json.hpp"
+
 #include "map.h"
-#include "trajectory_generator.h"
 #include "vehicle.h"
+#include "trajectory_generator.h"
 
 namespace PathPlanning {
 
 // Total time in seconds for the trajectory
-const double TRAJECTORT_T = 1.5;
+const double TRAJECTORY_T = 1.5;
 // Delta t between trajectory points in seconds (same as simulator controller update rate)
 const double TRAJECTORY_STEP_DT = 0.02;
 // Number of points for the trajectory
-const size_t TRAJECTORY_STEPS = TRAJECTORT_T / TRAJECTORY_STEP_DT;
+const size_t TRAJECTORY_STEPS = TRAJECTORY_T / TRAJECTORY_STEP_DT;
 // Max speed in m/s
 const double MAX_SPEED = Mph2ms(48);
 // Min speed in m/s
@@ -36,7 +37,6 @@ class PathPlanner {
  private:
   const Map &map;
   Vehicle ego;
-  FTrajectory f_trajectory;
   std::vector<Traffic> lanes_traffic;
   const TrajectoryGenerator trajectory_generator;
 

@@ -16,7 +16,7 @@ void PathPlanning::PathPlanner::Update(const json &telemetry) {
 
 void PathPlanning::PathPlanner::UpdateEgo(const json &telemetry) {
   const std::size_t steps_to_go = telemetry["previous_path_x"].size();
-  const std::size_t steps_consumed = this->f_trajectory.size() - steps_to_go;
+  const std::size_t steps_consumed = this->ego.trajectory.size() - steps_to_go;
 
   const double s_p = Map::WrapDistance(telemetry["s"]);
   const double s_v = Mph2ms(telemetry["speed"]);
@@ -29,9 +29,9 @@ void PathPlanning::PathPlanner::UpdateEgo(const json &telemetry) {
   std::cout << "Telemetry: (S: " << state.s.p << ", D: " << state.d.p << ", Speed: " << state.s.v << ")" << std::endl;
 
   if (steps_to_go == 0) {  // Empty path or all points consumed
-    this->f_trajectory.clear();
+    this->ego.trajectory.clear();
   } else if (steps_consumed > 0) {  // Use data from the previous trajectory
-    state = this->f_trajectory[steps_consumed - 1];
+    state = this->ego.trajectory[steps_consumed - 1];
   }
 
   this->ego.UpdateState(state);
@@ -152,7 +152,7 @@ void PathPlanning::PathPlanner::UpdateTrajectory() {
   // TODO behavior planning
   PathPlanning::Frenet start = this->ego.state;
 
-  PathPlanning::Frenet target = GetTarget(ego.lane, TRAJECTORT_T);
+  PathPlanning::Frenet target = GetTarget(ego.lane, TRAJECTORY_T);
 
   std::cout << "Start:" << std::endl;
   std::cout << "S: " << start.s.p << " - " << start.s.v << " - " << start.s.a << std::endl;
@@ -162,7 +162,7 @@ void PathPlanning::PathPlanner::UpdateTrajectory() {
   std::cout << "S: " << target.s.p << " - " << target.s.v << " - " << target.s.a << std::endl;
   std::cout << "D: " << target.d.p << " - " << target.d.v << " - " << target.d.a << std::endl;
 
-  this->f_trajectory = this->trajectory_generator.Generate(start, target, TRAJECTORY_STEPS);
+  this->ego.UpdateTrajectory(this->trajectory_generator.Generate(start, target, TRAJECTORY_STEPS));
 
   std::cout << std::endl;
 }
@@ -172,10 +172,10 @@ PathPlanning::Trajectory PathPlanning::PathPlanner::getGlobalCoordTrajectory() c
   std::vector<double> next_y_vals;
 
   // std::cout << "Trajectory: " << std::endl;
-  for (auto &step : this->f_trajectory) {
+  for (auto &step : this->ego.trajectory) {
     auto coord = this->map.FrenetToCartesian(step.s.p, step.d.p);
-    // std::cout << "[" << step.s.p << ", " << step.d.p << ", " << coord.first << ", " << coord.second << "] " << std::endl;
-    // if (std::fabs(step.s.a) >= MAX_ACC || std::fabs(step.d.a) >= MAX_ACC) {
+    // std::cout << "[" << step.s.p << ", " << step.d.p << ", " << coord.first << ", " << coord.second << "] " <<
+    // std::endl; if (std::fabs(step.s.a) >= MAX_ACC || std::fabs(step.d.a) >= MAX_ACC) {
     //   std::cout << "[WARNING]: Acceleration exceeded (" << step.s.a << ", " << step.d.a << ")" << std::endl;
     // }
     // if (step.s.v >= MAX_SPEED || step.d.v >= MAX_SPEED) {
