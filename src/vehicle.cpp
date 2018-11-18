@@ -1,10 +1,6 @@
 #include "vehicle.h"
 #include "map.h"
 
-bool PathPlanning::Vehicle::SComparator(const Vehicle &first, const Vehicle &second) {
-  return first.state.s.p < second.state.s.p;
-}
-
 PathPlanning::Vehicle::Vehicle(size_t id) : id(id) {}
 
 PathPlanning::Vehicle::Vehicle(size_t id, const Frenet &state) : id(id), state(state) {}

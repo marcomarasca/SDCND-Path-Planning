@@ -10,8 +10,6 @@ const double VEHICLE_LENGTH = 5.0;
 
 class Vehicle {
  public:
-  static bool SComparator(const Vehicle &first, const Vehicle &second);
-
   size_t id;
   Frenet state;
   FTrajectory trajectory;
