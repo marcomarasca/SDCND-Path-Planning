@@ -18,7 +18,7 @@ void PathPlanning::PathPlanner::UpdateEgo(const json &telemetry) {
   const std::size_t steps_to_go = telemetry["previous_path_x"].size();
   const std::size_t steps_consumed = this->ego.trajectory.size() - steps_to_go;
 
-  const double s_p = Map::WrapDistance(telemetry["s"]);
+  const double s_p = Map::Mod(telemetry["s"]);
   const double s_v = Mph2ms(telemetry["speed"]);
   const double d_p = telemetry["d"];
 
@@ -52,14 +52,14 @@ void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
     // Vehicle telemetry: id, x, y, vx, vy, s, d,
     size_t id = vehicle_telemetry[0];
 
-    double s_p = Map::WrapDistance(vehicle_telemetry[5]);
+    double s_p = Map::Mod(vehicle_telemetry[5]);
     double d_p = vehicle_telemetry[6];
 
     if (d_p < 0) {  // Vehicle not on the rendered yet
       continue;
     }
 
-    if (std::fabs(Map::WrapDistanceDiff(s_p, this->ego.state.s.p)) > RANGE) {  // Vehicle out of sensor reach
+    if (std::fabs(Map::ModDistance(s_p, this->ego.state.s.p)) > RANGE) {  // Vehicle out of sensor reach
       continue;
     }
 
@@ -74,11 +74,17 @@ void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
     this->traffic[lane].emplace_back(id, state);
   }
 
+  const double s = this->ego.state.s.p;
   for (auto &lane_traffic : this->traffic) {
-    // Sort the vehicles by s
-    // TODO Since the map is circular it might happen that vehicles past the 0 point are in front but are
-    // here detected as behind, create a comparator that correctly takes this into account
-    std::sort(lane_traffic.begin(), lane_traffic.end(), Vehicle::SComparator);
+    // Sort the vehicles by distance to the ego vehicle
+    std::sort(lane_traffic.begin(), lane_traffic.end(), [&s](const Vehicle &a, const Vehicle &b) {
+      return Map::ModDistance(a.state.s.p, s) < Map::ModDistance(b.state.s.p, s);
+    });
+    // std::cout << "Lane Traffic: ";
+    // for (auto &vehicle : lane_traffic) {
+    //   std::cout << vehicle.id << ":" << vehicle.state.s.p << " ";
+    // }
+    // std::cout << std::endl;
   }
 }
 
@@ -105,18 +111,18 @@ PathPlanning::Frenet PathPlanning::PathPlanner::GetTarget(size_t lane, double t)
   // Projected Acceleration: (v2 - v1) / t
   double acc = (s_v - start_s.v) / t;
   // Constant acceleration: s1 + (v1 * t + 0.5 * a * t^2)
-  double s_p = Map::WrapDistance(start_s.p + start_s.v * t + 0.5 * acc * std::pow(t, 2));
+  double s_p = Map::Mod(start_s.p + start_s.v * t + 0.5 * acc * std::pow(t, 2));
   // Final accelleration can be the projected one if going less than the speed limit
   double s_a = s_v < MAX_SPEED ? acc : 0.0;
 
   // If we have a vehicle ahead adapt the speed to avoid collisions
   Vehicle ahead(EGO_ID);
   if (this->VehicleAhead(lane, ahead)) {
-    const double distance = Map::WrapDistanceDiff(ahead.state.s.p, this->ego.state.s.p);
+    const double distance = Map::ModDistance(ahead.state.s.p, this->ego.state.s.p);
     std::cout << "[WARNING]: Vehicle " << ahead.id << " ahead at " << distance << " m" << std::endl;
     // Computes the distance at time t
     std::cout << ahead.trajectory.size() << std::endl;
-    const double distance_at_t = Map::WrapDistanceDiff(ahead.trajectory.back().s.p, this->ego.StateAt(t).s.p);
+    const double distance_at_t = Map::ModDistance(ahead.trajectory.back().s.p, this->ego.StateAt(t).s.p);
     if (distance_at_t < SAFE_DISTANCE) {
       std::cout << "[WARNING]: Following " << ahead.id << std::endl;
       s_v = std::min(MAX_SPEED, ahead.state.s.v);  // Follow the car ahead
@@ -132,13 +138,17 @@ PathPlanning::Frenet PathPlanning::PathPlanner::GetTarget(size_t lane, double t)
   return {{s_p, s_v, s_a}, {d_p, d_v, d_a}};
 }
 
-bool PathPlanning::PathPlanner::VehicleAhead(size_t lane, Vehicle &vehicle) const {
+bool PathPlanning::PathPlanner::VehicleAhead(size_t lane, Vehicle &ahead) const {
   auto &lane_traffic = this->traffic[lane];
-  auto it = std::lower_bound(lane_traffic.begin(), lane_traffic.end(), this->ego, Vehicle::SComparator);
   bool found = false;
-  if (it != lane_traffic.end()) {
-    vehicle = *it;
-    found = true;
+  // Lane vehicles are sorted by distance to the ego vehicle
+  for (auto &vehicle : lane_traffic) {
+    double distance = Map::ModDistance(vehicle.state.s.p, this->ego.state.s.p);
+    if (distance >= 0) {
+      ahead = vehicle;
+      found = true;
+      break;
+    }
   }
   return found;
 }
