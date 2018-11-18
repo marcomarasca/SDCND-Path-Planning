@@ -45,7 +45,7 @@ void ProcessTelemetry(uWS::WebSocket<uWS::SERVER> &ws, PathPlanning::PathPlanner
             << std::endl;
 
   json msgJson;
-
+ 
   msgJson["next_x"] = trajectory.first;
   msgJson["next_y"] = trajectory.second;
 

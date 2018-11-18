@@ -108,6 +108,11 @@ inline double Distance(double x1, double y1, double x2, double y2) {
   return sqrt(x_diff * x_diff + y_diff * y_diff);
 }
 
+/**
+ * Returns a value between 0 and 1 for positive x and a value between -1 and 0 for negative x
+ */
+inline double Logistic(double x) { return 2.0 / (1 + std::exp(-x)) - 1.0; }
+
 }  // namespace PathPlanning
 
 #endif

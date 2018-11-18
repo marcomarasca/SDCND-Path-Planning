@@ -10,12 +10,12 @@ const double VEHICLE_LENGTH = 5.0;
 
 class Vehicle {
  public:
-  size_t id;
+  int id;
   Frenet state;
   FTrajectory trajectory;
 
-  Vehicle(size_t id);
-  Vehicle(size_t id, const Frenet &state);
+  Vehicle(int id);
+  Vehicle(int id, const Frenet &state);
   ~Vehicle(){};
 
   Frenet StateAt(double t) const;

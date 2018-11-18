@@ -1,9 +1,9 @@
 #include "vehicle.h"
 #include "map.h"
 
-PathPlanning::Vehicle::Vehicle(size_t id) : id(id) {}
+PathPlanning::Vehicle::Vehicle(int id) : id(id) {}
 
-PathPlanning::Vehicle::Vehicle(size_t id, const Frenet &state) : id(id), state(state) {}
+PathPlanning::Vehicle::Vehicle(int id, const Frenet &state) : id(id), state(state) {}
 
 size_t PathPlanning::Vehicle::GetLane() const { return Map::LaneIndex(this->state.d.p); }
 
