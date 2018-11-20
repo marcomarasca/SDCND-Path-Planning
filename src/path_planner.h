@@ -39,14 +39,14 @@ class PathPlanner {
   PathPlanner(Map &map, size_t lane_n);
   ~PathPlanner(){};
 
-  void Update(const json &telemetry);
+  void Update(const json &telemetry, double processing_time);
   CTrajectory GetTrajectory() const;
 
  private:
   void UpdateEgo(const json &telemetry);
   void UpdateTraffic(const json &telemetry);
   void UpdatePredictions();
-  void UpdatePlan();
+  void UpdatePlan(double processing_time);
 };
 
 }  // namespace PathPlanning

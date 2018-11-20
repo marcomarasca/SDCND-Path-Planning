@@ -45,6 +45,18 @@ PathPlanning::FTrajectory PathPlanning::TrajectoryGenerator::Generate(const Fren
   return trajectory;
 }
 
+PathPlanning::FTrajectory PathPlanning::TrajectoryGenerator::Predict(const Frenet &start,
+                                                                     const StatePredictionFunction &prediction,
+                                                                     size_t steps) const {
+  FTrajectory trajectory;
+  trajectory.reserve(steps);
+  for (size_t i = 1; i <= steps; ++i) {
+    const double t = i * step_dt;
+    trajectory.emplace_back(prediction(t));
+  }
+  return trajectory;
+}
+
 PathPlanning::CTrajectory PathPlanning::TrajectoryGenerator::FrenetToCartesian(const FTrajectory &trajectory) const {
   std::vector<double> next_x_vals;
   std::vector<double> next_y_vals;

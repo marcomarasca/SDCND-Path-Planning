@@ -21,15 +21,6 @@ void PathPlanning::Vehicle::UpdateTrajectory(const PathPlanning::FTrajectory &tr
   this->trajectory = trajectory;
 }
 
-void PathPlanning::Vehicle::PredictTrajectory(size_t steps, double step_dt) {
-  this->trajectory.clear();
-  this->trajectory.reserve(steps);
-  for (size_t i = 1; i <= steps; ++i) {
-    const double t = i * step_dt;
-    this->trajectory.emplace_back(this->PredictStateAt(t));
-  }
-}
-
 void PathPlanning::Vehicle::ResetTrajectory() {
   this->trajectory.clear();
 }

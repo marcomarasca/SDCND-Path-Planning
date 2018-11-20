@@ -9,11 +9,11 @@ PathPlanning::PathPlanner::PathPlanner(Map &map, size_t lane_n)
       trajectory_generator(map, TRAJECTORY_STEP_DT),
       behaviour_planner(this->trajectory_generator) {}
 
-void PathPlanning::PathPlanner::Update(const json &telemetry) {
+void PathPlanning::PathPlanner::Update(const json &telemetry, double processing_time) {
   this->UpdateEgo(telemetry);
   this->UpdateTraffic(telemetry);
   this->UpdatePredictions();
-  this->UpdatePlan();
+  this->UpdatePlan(processing_time);
 }
 
 void PathPlanning::PathPlanner::UpdateEgo(const json &telemetry) {
@@ -98,12 +98,16 @@ void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
 void PathPlanning::PathPlanner::UpdatePredictions() {
   for (auto &lane_traffic : this->traffic) {
     for (auto &vehicle : lane_traffic) {
-      vehicle.PredictTrajectory(TRAJECTORY_STEPS, TRAJECTORY_STEP_DT);
+      FTrajectory trajectory = this->trajectory_generator.Predict(
+          vehicle.state, [&vehicle](double t) { return vehicle.PredictStateAt(t); }, TRAJECTORY_STEPS);
+      vehicle.UpdateTrajectory(trajectory);
     }
   }
 }
 
-void PathPlanning::PathPlanner::UpdatePlan() {
+void PathPlanning::PathPlanner::UpdatePlan(double processing_time) {
+  std::cout << "Processing time: " << processing_time << " ms (~ " << (processing_time / 1000 / TRAJECTORY_STEP_DT)
+            << " steps)" << std::endl;
   FTrajectory next_trajectory = this->behaviour_planner.UpdatePlan(this->ego, this->traffic, TRAJECTORY_STEPS);
   if (!next_trajectory.empty()) {
     this->ego.UpdateTrajectory(next_trajectory);
