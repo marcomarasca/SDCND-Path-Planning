@@ -10,8 +10,6 @@ double PathPlanning::BehaviourPlanner::SafeDistance(double v) {
 PathPlanning::BehaviourPlanner::BehaviourPlanner(const TrajectoryGenerator &trajectory_generator)
     : trajectory_generator(trajectory_generator) {}
 
-PathPlanning::Frenet PathPlanning::BehaviourPlanner::CurrentPlan() { return this->plan; }
-
 void PathPlanning::BehaviourPlanner::ResetPlan(const Frenet &state) { this->plan = state; };
 
 PathPlanning::FTrajectory PathPlanning::BehaviourPlanner::UpdatePlan(const Vehicle &ego, const Traffic &traffic,
@@ -21,7 +19,7 @@ PathPlanning::FTrajectory PathPlanning::BehaviourPlanner::UpdatePlan(const Vehic
   FTrajectory best_trajectory;
   std::cout << "Computing new plan..." << std::endl;
   const double t = trajectory_steps * this->trajectory_generator.step_dt;
-  for (size_t target_lane : this->AvailableLanes(ego)) {
+  for (size_t target_lane : this->GetAvailableLanes(ego)) {
     std::cout << "Computing cost for lane: " << target_lane << std::endl;
     // Generate a candidate trajectory
     Frenet target = this->PredictTarget(ego, traffic, target_lane, t);
@@ -66,7 +64,7 @@ PathPlanning::FTrajectory PathPlanning::BehaviourPlanner::GenerateTrajectory(con
   return trajectory;
 }
 
-std::vector<size_t> PathPlanning::BehaviourPlanner::AvailableLanes(const Vehicle &vehicle) const {
+std::vector<size_t> PathPlanning::BehaviourPlanner::GetAvailableLanes(const Vehicle &vehicle) const {
   // Get target lanes
   const size_t current_lane = vehicle.GetLane();
   std::vector<size_t> available_lanes;
@@ -102,7 +100,7 @@ PathPlanning::Frenet PathPlanning::BehaviourPlanner::PredictTarget(const Vehicle
 
   // If we have a vehicle ahead adapt the speed to avoid collisions
   Vehicle ahead(-1);
-  if (this->VehicleAhead(ego, traffic, target_lane, ahead)) {
+  if (this->GetVehicleAhead(ego, traffic, target_lane, ahead)) {
     const double distance = Map::ModDistance(ahead.state.s.p, start.s.p);
     std::cout << "[WARNING]: Vehicle " << ahead.id << " ahead at " << distance << " m" << std::endl;
     const double safe_distance = SafeDistance(ahead.trajectory.back().s.v);
@@ -130,8 +128,8 @@ PathPlanning::Frenet PathPlanning::BehaviourPlanner::PredictTarget(const Vehicle
   return {{s_p, s_v, s_a}, {d_p, d_v, d_a}};
 }
 
-bool PathPlanning::BehaviourPlanner::VehicleAhead(const Vehicle &ego, const Traffic &traffic, size_t target_lane,
-                                                  Vehicle &ahead) const {
+bool PathPlanning::BehaviourPlanner::GetVehicleAhead(const Vehicle &ego, const Traffic &traffic, size_t target_lane,
+                                                     Vehicle &ahead) const {
   bool found = false;
   for (auto &vehicle : traffic[target_lane]) {
     double distance = Map::ModDistance(vehicle.state.s.p, ego.state.s.p);
@@ -162,7 +160,7 @@ double PathPlanning::BehaviourPlanner::EvaluateTrajectory(const Vehicle &ego, co
   // Collision cost
   double min_distance = std::numeric_limits<double>::max();
   bool collision = false;
-  Vehicle closest_vehicle(ego.id);
+  Vehicle closest_vehicle(-1);
   for (const auto &lane_traffic : traffic) {
     for (const auto &vehicle : lane_traffic) {
       double closest_distance = std::numeric_limits<double>::max();

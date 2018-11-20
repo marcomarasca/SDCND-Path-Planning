@@ -29,6 +29,9 @@ const double MIN_PROCESSING_TIME = 5 * TRAJECTORY_STEP_DT;
 
 using json = nlohmann::json;
 
+/**
+ * Main orchestrator for path planning
+ */
 class PathPlanner {
  private:
   const Map &map;
@@ -41,13 +44,37 @@ class PathPlanner {
   PathPlanner(Map &map, size_t lane_n);
   ~PathPlanner(){};
 
+  /**
+   * Updates the current plan according to the given telemetry and the estimated processing time (in seconds) to account
+   * for delays in the controller
+   */
   void Update(const json &telemetry, double processing_time);
+
+  /**
+   * Return the next trajectory in (global) cartesian coordinates
+   */
   CTrajectory GetTrajectory() const;
 
  private:
+  /**
+   * Update the current state of the ego vehicle
+   */
   void UpdateEgo(const json &telemetry);
+
+  /**
+   * Updates the state of the road traffic
+   */
   void UpdateTraffic(const json &telemetry);
+
+  /**
+   * Updates the estimated predictions for the vehicles on the road
+   */
   void UpdatePredictions();
+
+  /**
+   * Updates the plan according to the current state, accounts for eventual delays given by the estimated processing
+   * time (in seconds)
+   */
   void UpdatePlan(double processing_time);
 };
 

@@ -1,5 +1,6 @@
 #include "map.h"
 
+#include <vector>
 #include <math.h>
 #include <fstream>
 #include <iostream>
@@ -68,15 +69,13 @@ void PathPlanning::Map::LoadWaypoints(std::string file_path) {
   waypoints_dx.emplace_back(waypoints_dx[0]);
   waypoints_dy.emplace_back(waypoints_dy[0]);
 
+  // Build the splines to get a smooth transition
   this->spline_x.set_points(waypoints_s, waypoints_x);
   this->spline_y.set_points(waypoints_s, waypoints_y);
   this->spline_dx.set_points(waypoints_s, waypoints_dx);
   this->spline_dy.set_points(waypoints_s, waypoints_dy);
 }
 
-/**
- * Transform from Frenet s,d coordinates to Cartesian x,y
- */
 PathPlanning::Pair PathPlanning::Map::FrenetToCartesian(double s, double d) const {
   s = Mod(s);
   const double x = this->spline_x(s) + this->spline_dx(s) * d;

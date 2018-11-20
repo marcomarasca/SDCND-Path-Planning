@@ -21,10 +21,10 @@ void PathPlanning::Vehicle::UpdateTrajectory(const PathPlanning::FTrajectory &tr
   this->trajectory = trajectory;
 }
 
-void PathPlanning::Vehicle::ForwardState(size_t trajectory_steps) {
-  assert(trajectory_steps < this->trajectory.size());
-  this->state = this->trajectory[trajectory_steps];
-  this->trajectory.erase(this->trajectory.begin(), this->trajectory.begin() + trajectory_steps + 1);
+void PathPlanning::Vehicle::ForwardState(size_t trajectory_step) {
+  assert(trajectory_step < this->trajectory.size());
+  this->state = this->trajectory[trajectory_step];
+  this->trajectory.erase(this->trajectory.begin(), this->trajectory.begin() + trajectory_step + 1);
 }
 
 void PathPlanning::Vehicle::ResetTrajectory() { this->trajectory.clear(); }
@@ -32,6 +32,7 @@ void PathPlanning::Vehicle::ResetTrajectory() { this->trajectory.clear(); }
 void PathPlanning::Vehicle::PositionUpdated() { this->state.s.p = Map::Mod(this->state.s.p); }
 
 PathPlanning::Frenet PathPlanning::Vehicle::PredictStateAt(double t) const {
+  // Simple constant acceleration model
   const double t_2 = t * t;
   const double s_p = this->state.s.p + this->state.s.v * t + 0.5 * this->state.s.a * t_2;
   const double s_v = this->state.s.v + this->state.s.a * t;
