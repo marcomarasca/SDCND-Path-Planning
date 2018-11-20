@@ -1,6 +1,8 @@
 #include "behaviour_planner.h"
+#include <iomanip>
 #include <iostream>
 #include <numeric>
+#include "logger.h"
 #include "map.h"
 
 double PathPlanning::BehaviourPlanner::SafeDistance(double v) {
@@ -14,54 +16,38 @@ void PathPlanning::BehaviourPlanner::ResetPlan(const Frenet &state) { this->plan
 
 PathPlanning::FTrajectory PathPlanning::BehaviourPlanner::UpdatePlan(const Vehicle &ego, const Traffic &traffic,
                                                                      size_t trajectory_steps, double processing_time) {
-  double min_cost = std::numeric_limits<double>::max();
+  const double t = trajectory_steps * this->trajectory_generator.step_dt;
+
   Frenet best_target;
   FTrajectory best_trajectory;
-  std::cout << "Computing new plan..." << std::endl;
-  const double t = trajectory_steps * this->trajectory_generator.step_dt;
+  double min_cost = std::numeric_limits<double>::max();
+
   for (size_t target_lane : this->GetAvailableLanes(ego)) {
-    std::cout << "Computing cost for lane: " << target_lane << std::endl;
+    LOG(DEBUG) << "Computing Cost for Lane: " << target_lane;
+
     // Generate a candidate trajectory
     Frenet target = this->PredictTarget(ego, traffic, target_lane, t);
     FTrajectory trajectory = this->GenerateTrajectory(ego, target, trajectory_steps, processing_time);
     const double trajectory_cost = this->EvaluateTrajectory(trajectory, traffic);
-    std::cout << "Cost for lane " << target_lane << ": " << trajectory_cost << std::endl;
+
+    LOG(DEBUG) << "Cost for Lane " << target_lane << ": " << trajectory_cost;
+
     if (trajectory_cost < min_cost) {
       min_cost = trajectory_cost;
       best_trajectory = trajectory;
       best_target = target;
     }
   }
+
   if (!best_trajectory.empty()) {
-    std::cout << "Best target lane: " << Map::LaneIndex(best_target.d.p) << std::endl;
-    std::cout << "Best trajectory: (Length " << best_trajectory.size() << ", Cost: " << min_cost << ")" << std::endl;
     this->plan = best_target;
+
+    LOG(INFO) << "<------ Best Lane: " << Map::LaneIndex(best_target.d.p) << " (Cost: " << min_cost << ") ------>";
   } else {
-    std::cout << "[WARNING]: Could not compute a new plan" << std::endl;
+    LOG(WARN) << "<------ Cannot Compute Candidate ------>";
   }
+
   return best_trajectory;
-}
-
-PathPlanning::FTrajectory PathPlanning::BehaviourPlanner::GenerateTrajectory(const Vehicle &ego, const Frenet &target,
-                                                                             size_t trajectory_steps,
-                                                                             double processing_time) {
-  // Generates a trajectory considering the delay given by the processing time
-  size_t forward_steps =
-      std::min(ego.trajectory.size(), static_cast<size_t>(processing_time / this->trajectory_generator.step_dt));
-
-  std::cout << "Processing time: " << processing_time << " s (forwarding of " << forward_steps << ")" << std::endl;
-
-  if (forward_steps == 0) {
-    return this->trajectory_generator.Generate(ego.state, target, trajectory_steps);
-  }
-
-  Frenet start = ego.StateAt(forward_steps - 1);
-  FTrajectory trajectory{ego.trajectory.begin(), ego.trajectory.begin() + forward_steps};
-  FTrajectory trajectory_tail = this->trajectory_generator.Generate(start, target, trajectory_steps - forward_steps);
-  trajectory.reserve(trajectory_steps);
-  trajectory.insert(trajectory.end(), trajectory_tail.begin(), trajectory_tail.end());
-
-  return trajectory;
 }
 
 std::vector<size_t> PathPlanning::BehaviourPlanner::GetAvailableLanes(const Vehicle &vehicle) const {
@@ -88,7 +74,9 @@ PathPlanning::Frenet PathPlanning::BehaviourPlanner::PredictTarget(const Vehicle
   const double max_speed = MAX_SPEED - 1 * lane_diff;
   // Limits the acceleration when going slower
   const double max_acc = start.s.v < MIN_SPEED ? MAX_ACC / 2.0 : MAX_ACC - 0.2 * lane_diff;
-  std::cout << "Lane " << target_lane << " Max speed: " << max_speed << ", Max Acc: " << max_acc << std::endl;
+
+  LOG(DEBUG) << LOG_BUFER << "Lane Constraints: " << max_speed << " m/s, " << max_acc << " m/s^2";
+
   // Velocity: v1 + a * t
   double s_v = std::min(max_speed, start.s.v + max_acc * t);
   // Projected Acceleration: (v2 - v1) / t
@@ -102,17 +90,21 @@ PathPlanning::Frenet PathPlanning::BehaviourPlanner::PredictTarget(const Vehicle
   Vehicle ahead(-1);
   if (this->GetVehicleAhead(ego, traffic, target_lane, ahead)) {
     const double distance = Map::ModDistance(ahead.state.s.p, start.s.p);
-    std::cout << "[WARNING]: Vehicle " << ahead.id << " ahead at " << distance << " m" << std::endl;
     const double safe_distance = SafeDistance(ahead.trajectory.back().s.v);
-    std::cout << "[WARNING]: Predicted safe distance: " << safe_distance << " m" << std::endl;
+
+    LOG(DEBUG) << LOG_BUFER << "Vehicle " << ahead.id << " Ahead in " << distance
+               << " m (Safe Distance: " << safe_distance << " m)";
+
     // Max s delta at time t according to front vehicle position at t
     const double max_s_p_delta = Map::ModDistance(ahead.trajectory.back().s.p - safe_distance, start.s.p);
     if (max_s_p_delta < s_p_delta) {
-      std::cout << "[WARNING]: Following " << ahead.id << " (Delta: " << s_p_delta << ", Max: " << max_s_p_delta << ")"
-                << std::endl;
+      s_v = std::min(s_v, ahead.state.s.v);
+
+      LOG(DEBUG) << LOG_BUFER << "Following Vehicle " << ahead.id << " at Speed: " << s_v << " (Delta: " << s_p_delta
+                 << ", Max Delta: " << max_s_p_delta << ")";
+
       s_p_delta = max_s_p_delta < 0 ? s_p_delta : max_s_p_delta;
-      s_v = std::min(s_v, ahead.state.s.v);  // Follow the car ahead
-      // s_a = 0.0;
+      s_a = 0.0;
     }
   }
 
@@ -126,6 +118,28 @@ PathPlanning::Frenet PathPlanning::BehaviourPlanner::PredictTarget(const Vehicle
   const double d_a = 0.0;
 
   return {{s_p, s_v, s_a}, {d_p, d_v, d_a}};
+}
+
+PathPlanning::FTrajectory PathPlanning::BehaviourPlanner::GenerateTrajectory(const Vehicle &ego, const Frenet &target,
+                                                                             size_t trajectory_steps,
+                                                                             double processing_time) {
+  // Generates a trajectory considering the delay given by the processing time
+  size_t forward_steps =
+      std::min(ego.trajectory.size(), static_cast<size_t>(processing_time / this->trajectory_generator.step_dt));
+
+  LOG(DEBUG) << LOG_BUFER << "Forward Steps: " << forward_steps;
+
+  if (forward_steps == 0) {
+    return this->trajectory_generator.Generate(ego.state, target, trajectory_steps);
+  }
+
+  Frenet start = ego.StateAt(forward_steps - 1);
+  FTrajectory trajectory{ego.trajectory.begin(), ego.trajectory.begin() + forward_steps};
+  FTrajectory trajectory_tail = this->trajectory_generator.Generate(start, target, trajectory_steps - forward_steps);
+  trajectory.reserve(trajectory_steps);
+  trajectory.insert(trajectory.end(), trajectory_tail.begin(), trajectory_tail.end());
+
+  return trajectory;
 }
 
 bool PathPlanning::BehaviourPlanner::GetVehicleAhead(const Vehicle &ego, const Traffic &traffic, size_t target_lane,
@@ -152,7 +166,7 @@ double PathPlanning::BehaviourPlanner::EvaluateTrajectory(const FTrajectory &tra
   size_t target_lane = Map::LaneIndex(trajectory.back().d.p);
 
   if (Map::InvalidLane(start_lane) || Map::InvalidLane(target_lane)) {
-    std::cout << "[WARNING]: Invalid lane (" << start_lane << ", " << target_lane << ")" << std::endl;
+    LOG(WARN) << LOG_BUFER << "Invalid Lane: " << start_lane << ", " << target_lane;
     return std::numeric_limits<double>::max();
   }
 
@@ -165,29 +179,35 @@ double PathPlanning::BehaviourPlanner::EvaluateTrajectory(const FTrajectory &tra
       double closest_distance = std::numeric_limits<double>::max();
       // Check the vehicle trajectory
       auto &other_trajectory = vehicle.trajectory;
+      assert(trajectory.size() == other_trajectory.size());
+
       for (size_t i = 0; i < trajectory.size(); ++i) {
-        double s_distance = std::fabs(Map::ModDistance(trajectory[i].s.p, other_trajectory[i].s.p));
-        double d_distance = std::fabs(trajectory[i].d.p - other_trajectory[i].d.p);
-        double distance_at_t = Distance(0, 0, d_distance, s_distance);
+        const auto &step = trajectory[i];
+        const auto &other_step = other_trajectory[i];
+        const double s_distance = std::fabs(Map::ModDistance(step.s.p, other_step.s.p));
+        const double d_distance = std::fabs(step.d.p - other_step.d.p);
+        const double distance_at_t = Distance(0, 0, d_distance, s_distance);
         if (distance_at_t < closest_distance) {
           closest_distance = distance_at_t;
         }
-        if (s_distance < VEHICLE_LENGTH * 2 &&
-            Map::LaneIndex(trajectory[i].d.p) == Map::LaneIndex(other_trajectory[i].d.p)) {
-          std::cout << "[COLLISION]: (" << trajectory[i].s.p << ", " << trajectory[i].d.p << ") - ("
-                    << other_trajectory[i].s.p << ", " << other_trajectory[i].d.p << ")" << std::endl;
+        if (s_distance < VEHICLE_LENGTH * 2 && Map::LaneIndex(step.d.p) == Map::LaneIndex(other_step.d.p)) {
+          LOG(DEBUG) << LOG_BUFER << "Collision Detected: " << step.s.p << ", " << step.d.p << " - " << other_step.s.p
+                     << ", " << other_step.d.p;
           collision = true;
           break;
         }
       }
+
       if (closest_distance < min_distance) {
         min_distance = closest_distance;
         closest_vehicle = vehicle;
       }
+
       if (collision) {
         break;
       }
     }
+
     if (collision) {
       break;
     }
@@ -198,16 +218,13 @@ double PathPlanning::BehaviourPlanner::EvaluateTrajectory(const FTrajectory &tra
 
   if (collision) {
     collision_cost = 1.0;
-    std::cout << "[WARNING]: Collision on trajectory with vehicle " << closest_vehicle.id << " ("
-              << closest_vehicle.state.s.p << ", " << closest_vehicle.state.s.v << ")" << std::endl;
+    LOG(DEBUG) << LOG_BUFER << "Collision with Vehicle " << closest_vehicle.id << " (" << closest_vehicle.state.s.p
+               << ", " << closest_vehicle.state.s.v << ")";
   } else {
     collision_cost = 0.0;
   }
 
   buffer_cost = Logistic(VEHICLE_LENGTH * 2 / min_distance);
-
-  std::cout << "Collistion cost: " << collision_cost << " (Min distance: " << min_distance << ")" << std::endl;
-  std::cout << "Danger cost: " << buffer_cost << " (Min distance: " << min_distance << ")" << std::endl;
 
   // Traffic speed cost
   double lane_speed_cost = 0.0;
@@ -227,7 +244,6 @@ double PathPlanning::BehaviourPlanner::EvaluateTrajectory(const FTrajectory &tra
       lane_speed_cost = Logistic((MAX_SPEED - lane_speed) / MAX_SPEED);
     }
   }
-  std::cout << "Lane speed cost: " << lane_speed_cost << " (Lane speed ahead: " << lane_speed << ")" << std::endl;
 
   // Lane traffic cost
   double lane_traffic_cost = 0.0;
@@ -237,23 +253,33 @@ double PathPlanning::BehaviourPlanner::EvaluateTrajectory(const FTrajectory &tra
   if (tot_traffic > 0) {
     lane_traffic_cost = Logistic(static_cast<double>(lane_traffic) / tot_traffic);
   }
-  std::cout << "Traffic cost: " << lane_traffic_cost << "(Lane traffic: " << lane_traffic
-            << ", Tot Traffic: " << tot_traffic << ")" << std::endl;
 
   // Trajectory time
   double t = trajectory.size() * this->trajectory_generator.step_dt;
   // Average speed cost, rewards higher average speed
   double speed = Map::ModDistance(trajectory.back().s.p, trajectory.front().s.p) / t;
   double speed_cost = Logistic((MAX_SPEED - speed) / MAX_SPEED);
-  std::cout << "Speed cost: " << speed_cost << " (Avg speed: " << speed << ")" << std::endl;
 
   // Change plan cost
   size_t plan_lane = Map::LaneIndex(this->plan.d.p);
   double change_plan_cost = plan_lane != target_lane ? 1.0 : 0.0;
-  std::cout << "Change plan cost: " << change_plan_cost << std::endl;
 
   double unfinished_plan_cost = plan_lane != start_lane ? 1.0 : 0.0;
-  std::cout << "Unfinished plan cost: " << unfinished_plan_cost << std::endl;
+
+  LOG(DEBUG) << LOG_BUFER << std::left << std::setw(COST_LOG_BUFFER) << "Collistion Cost: " << std::setw(COST_LOG_W)
+             << collision_cost << " (Min Distance: " << min_distance << ")";
+  LOG(DEBUG) << LOG_BUFER << std::left << std::setw(COST_LOG_BUFFER) << "Buffer Cost: " << std::setw(COST_LOG_W)
+             << buffer_cost << " (Min Distance: " << min_distance << ")";
+  LOG(DEBUG) << LOG_BUFER << std::left << std::setw(COST_LOG_BUFFER) << "Lane Speed Cost: " << std::setw(COST_LOG_W)
+             << lane_speed_cost << " (Lane Speed: " << lane_speed << ")";
+  LOG(DEBUG) << LOG_BUFER << std::left << std::setw(COST_LOG_BUFFER) << "Traffic Cost: " << std::setw(COST_LOG_W)
+             << lane_traffic_cost << " (Lane Traffic: " << lane_traffic << ", Total Traffic: " << tot_traffic << ")";
+  LOG(DEBUG) << LOG_BUFER << std::left << std::setw(COST_LOG_BUFFER) << "Speed Cost: " << std::setw(COST_LOG_W)
+             << speed_cost << " (Avg speed: " << speed << ")";
+  LOG(DEBUG) << LOG_BUFER << std::left << std::setw(COST_LOG_BUFFER) << "Change Plan Cost: " << std::setw(COST_LOG_W)
+             << change_plan_cost;
+  LOG(DEBUG) << LOG_BUFER << std::left << std::setw(COST_LOG_BUFFER)
+             << "Unfinished Plan Cost: " << std::setw(COST_LOG_W) << unfinished_plan_cost;
 
   double cost = 0.0;
   cost += 10000 * collision_cost;

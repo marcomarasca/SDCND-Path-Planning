@@ -3,12 +3,14 @@
 #include <vector>
 
 #include "json.hpp"
+#include "logger.h"
 #include "map.h"
 #include "path_planner.h"
 #include "utils.h"
 
 // for convenience
 using json = nlohmann::json;
+using PathPlanning::LOG;
 
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
@@ -44,9 +46,9 @@ void ProcessTelemetry(uWS::WebSocket<uWS::SERVER> &ws, PathPlanning::PathPlanner
 
   PathPlanning::CTrajectory trajectory = planner.GetTrajectory();
 
-  std::cout << "Time: " << PathPlanning::Timer::ToMilliseconds(update_d).count() << " ms" << std::endl;
-  std::cout << "Avg Time: " << PathPlanning::Timer::ToMilliseconds(timer.AverageDuration()).count() << " ms"
-            << std::endl;
+  LOG(PathPlanning::INFO) << "Processing time: " << PathPlanning::Timer::ToMilliseconds(update_d).count()
+                          << " ms (Average: " << PathPlanning::Timer::ToMilliseconds(timer.AverageDuration()).count()
+                          << " ms)";
 
   json msgJson;
 
@@ -97,17 +99,17 @@ void StartServer(PathPlanning::Map &map) {
   });
 
   h.onConnection(
-      [](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) { std::cout << "Connected!!!" << std::endl; });
+      [](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) { LOG(PathPlanning::INFO) << "Connected!!!"; });
 
   h.onDisconnection([](uWS::WebSocket<uWS::SERVER> ws, int code, char *message, size_t length) {
-    std::cout << "Disconnected" << std::endl;
+    LOG(PathPlanning::INFO) << "Disconnected";
   });
 
   int port = 4567;
   if (h.listen(port)) {
-    std::cout << "Listening to port " << port << std::endl;
+    LOG(PathPlanning::INFO) << "Listening to port " << port;
   } else {
-    std::cerr << "Failed to listen to port" << std::endl;
+    LOG(PathPlanning::ERROR) << "Failed to listen to port";
     exit(EXIT_FAILURE);
   }
 
@@ -126,7 +128,7 @@ int main(int argc, char *argv[]) {
   try {
     map.LoadWaypoints(map_file_path);
   } catch (std::exception &e) {
-    std::cout << e.what() << std::endl;
+    LOG(PathPlanning::ERROR) << e.what();
     exit(EXIT_FAILURE);
   }
 

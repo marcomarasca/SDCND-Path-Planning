@@ -1,10 +1,11 @@
 #include "map.h"
 
-#include <vector>
 #include <math.h>
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <vector>
+#include "logger.h"
 
 size_t PathPlanning::Map::LaneIndex(double d) { return (size_t)(d / PathPlanning::LANE_WIDTH); }
 double PathPlanning::Map::LaneDisplacement(size_t lane_index) { return lane_index * LANE_WIDTH + LANE_WIDTH / 2.0; }
@@ -28,7 +29,7 @@ double PathPlanning::Map::ModDistance(double s1, double s2) {
 PathPlanning::Map::Map() {}
 
 void PathPlanning::Map::LoadWaypoints(std::string file_path) {
-  std::cout << "Loading map waypoints from: " << file_path << std::endl;
+  LOG(INFO) << "Loading map waypoints from: " << file_path;
 
   std::ifstream map_file(file_path.c_str(), std::ifstream::in);
 

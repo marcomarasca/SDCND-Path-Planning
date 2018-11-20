@@ -7,6 +7,9 @@
 
 namespace PathPlanning {
 
+const size_t COST_LOG_BUFFER = 22;
+const size_t COST_LOG_W = 10;
+
 // Max speed in m/s
 const double MAX_SPEED = Mph2ms(48);
 // Min speed in m/s

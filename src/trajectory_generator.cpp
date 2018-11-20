@@ -1,5 +1,4 @@
 #include "trajectory_generator.h"
-#include <iostream>
 #include "Eigen/Dense"
 #include "utils.h"
 
@@ -12,7 +11,6 @@ PathPlanning::FTrajectory PathPlanning::TrajectoryGenerator::Generate(const Fren
                                                                       size_t steps) const {
   const double T = steps * step_dt;
 
-  std::cout << "Generating trajectory for t: " << T << "s (" << steps << " steps)" << std::endl;
   // Computes the trajectory coefficients
   const Coeff s_p_coeff = this->MinimizeJerk(start.s, target.s, T);
   const Coeff s_v_coeff = this->Differentiate(s_p_coeff);
@@ -30,15 +28,11 @@ PathPlanning::FTrajectory PathPlanning::TrajectoryGenerator::Generate(const Fren
 
     const double s_p = this->Eval(t, s_p_coeff);
     const double s_v = this->Eval(t, s_v_coeff);
-    // const double s_v = (s_p - prev_state.s.p) / step_dt;
     const double s_a = this->Eval(t, s_a_coeff);
-    // const double s_a = (s_v - prev_state.s.v) / step_dt;
 
     const double d_p = this->Eval(t, d_p_coeff);
     const double d_v = this->Eval(t, d_v_coeff);
-    // const double d_v = (d_p - prev_state.d.p) / step_dt;
     const double d_a = this->Eval(t, d_a_coeff);
-    // const double d_a = (d_v - prev_state.d.v) / step_dt;
 
     const State s{s_p, s_v, s_a};
     const State d{d_p, d_v, d_a};
@@ -64,34 +58,6 @@ PathPlanning::FTrajectory PathPlanning::TrajectoryGenerator::Predict(const Frene
 PathPlanning::CTrajectory PathPlanning::TrajectoryGenerator::FrenetToCartesian(const FTrajectory &trajectory) const {
   std::vector<double> next_x_vals;
   std::vector<double> next_y_vals;
-
-  // Frenet prev_state = trajectory[0];
-
-  // const double max_v = Mph2ms(49);
-  // const double max_a = 10;
-  // const double max_s = max_v * step_dt + 0.5 * max_a * std::pow(step_dt, 2);
-  // for (int i=1; i< trajectory.size(); ++i) {
-  //   auto step = trajectory[i];
-  //   // Sanity checks
-  //   if (step.s.p - prev_state.s.p <= 0) {
-  //     std::cout << "[WARNING]: Negative position: " << step.s.p << ", " << step.d.p << "(Prev: " << prev_state.s.p << ", "
-  //               << prev_state.d.p << ")" << std::endl;
-  //   }
-  //   if (step.s.p - prev_state.s.p >= max_s || step.d.p - prev_state.d.p >= max_s) {
-  //     std::cout << "[WARNING]: Distance exceeded: " << step.s.p << ", " << step.d.p << "(Prev: " << prev_state.s.p << ", "
-  //               << prev_state.d.p << ")" << std::endl;
-  //   }
-  //   if (step.s.v >= max_v || step.d.v >= max_v) {
-  //     std::cout << "[WARNING]: Speed exceeded: " << step.s.v << ", " << step.d.v << "(Prev: " << prev_state.s.v << ", "
-  //               << prev_state.d.v << ")" << std::endl;
-  //   }
-  //   if (step.s.a >= max_a || step.d.a >= max_a) {
-  //     std::cout << "[WARNING]: Acceleration exceeded: " << step.s.a << ", " << step.d.a << "(Prev: " << prev_state.s.a << ", "
-  //               << prev_state.d.a << ")" << std::endl;
-  //   }
-    
-  //   prev_state = step;
-  // }
 
   for (auto &step : trajectory) {
     auto coord = this->map.FrenetToCartesian(step.s.p, step.d.p);

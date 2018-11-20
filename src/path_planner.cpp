@@ -1,5 +1,6 @@
 #include "path_planner.h"
 #include <algorithm>
+#include "logger.h"
 #include "utils.h"
 
 PathPlanning::PathPlanner::PathPlanner(Map &map, size_t lane_n)
@@ -10,6 +11,7 @@ PathPlanning::PathPlanner::PathPlanner(Map &map, size_t lane_n)
       behaviour_planner(this->trajectory_generator) {}
 
 void PathPlanning::PathPlanner::Update(const json &telemetry, double processing_time) {
+  LOG(INFO) << "<------ Updating Path Planner (Processing time: " << processing_time << " s) ------>";
   this->UpdateEgo(telemetry);
   this->UpdateTraffic(telemetry);
   this->UpdatePredictions();
@@ -26,9 +28,14 @@ void PathPlanning::PathPlanner::UpdateEgo(const json &telemetry) {
 
   Frenet state{{s_p, s_v, 0.0}, {d_p, 0.0, 0.0}};
 
-  std::cout << "Prev Path: " << steps_to_go << std::endl;
-  std::cout << "Steps Consumed: " << steps_consumed << std::endl;
-  std::cout << "Telemetry: (S: " << state.s.p << ", D: " << state.d.p << ", Speed: " << state.s.v << ")" << std::endl;
+  const size_t col_w = 12;
+
+  LOG(INFO) << "Updating Vehicle State (Consumed Steps: " << steps_consumed << ", Unvisited Steps: " << steps_to_go
+            << "): ";
+  LOG(INFO) << LOG_BUFER << std::setw(col_w) << "Telemetry: " << std::setw(col_w) << "s_p" << std::setw(col_w) << "d_p"
+            << std::setw(col_w) << "s_v" << std::setw(col_w) << "d_v";
+  LOG(INFO) << LOG_BUFER << std::setw(col_w) << "Received: " << std::setw(col_w) << state.s.p << std::setw(col_w)
+            << state.d.p << std::setw(col_w) << state.s.v << std::setw(col_w) << state.d.v;
 
   this->ego.UpdateState(state);
 
@@ -41,13 +48,16 @@ void PathPlanning::PathPlanner::UpdateEgo(const json &telemetry) {
     this->ego.ForwardState(steps_consumed - 1);
   }
 
-  std::cout << "State: (S: " << this->ego.state.s.p << ", D: " << this->ego.state.d.p
-            << ", S_V: " << this->ego.state.s.v << ", D_V: " << this->ego.state.d.v << ")" << std::endl;
+  LOG(INFO) << LOG_BUFER << std::setw(col_w) << "Using: " << std::setw(col_w) << this->ego.state.s.p << std::setw(col_w)
+            << this->ego.state.d.p << std::setw(col_w) << this->ego.state.s.v << std::setw(col_w)
+            << this->ego.state.d.v;
 }
 
 void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
   // Sensor Fusion Data, a list of all other cars on the same side of the road.
   auto sensor_fusion = telemetry["sensor_fusion"];
+
+  LOG(INFO) << "Updating Traffic Data (Sensed Vehicles: " << sensor_fusion.size() << ")";
 
   // Reserve some space in the lane
   for (auto &lane : this->traffic) {
@@ -88,15 +98,19 @@ void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
   }
 
   const double s = this->ego.state.s.p;
+  size_t lane = 0;
   for (auto &lane_traffic : this->traffic) {
+    LOG(DEBUG) << LOG_BUFER << "Lane " << lane << " Traffic: " << lane_traffic.size();
     // Sort the vehicles by distance to the ego vehicle
     std::sort(lane_traffic.begin(), lane_traffic.end(), [&s](const Vehicle &a, const Vehicle &b) {
       return Map::ModDistance(a.state.s.p, s) < Map::ModDistance(b.state.s.p, s);
     });
+    ++lane;
   }
 }
 
 void PathPlanning::PathPlanner::UpdatePredictions() {
+  LOG(INFO) << "Updating Traffic Predictions";
   for (auto &lane_traffic : this->traffic) {
     for (auto &vehicle : lane_traffic) {
       FTrajectory trajectory = this->trajectory_generator.Predict(
@@ -107,6 +121,7 @@ void PathPlanning::PathPlanner::UpdatePredictions() {
 }
 
 void PathPlanning::PathPlanner::UpdatePlan(double processing_time) {
+  LOG(INFO) << "Updating Next Plan (Processing Time: " << processing_time << " s)";
   FTrajectory next_trajectory =
       this->behaviour_planner.UpdatePlan(this->ego, this->traffic, TRAJECTORY_STEPS, processing_time);
   if (!next_trajectory.empty()) {

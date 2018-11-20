@@ -4,6 +4,7 @@
 #include <math.h>
 #include <chrono>
 #include <vector>
+#include <string>
 
 // for portability of M_PI (Vis Studio, MinGW, etc.)
 #ifndef M_PI
@@ -11,6 +12,8 @@
 #endif
 
 namespace PathPlanning {
+
+const std::string LOG_BUFER = "  ";
 
 struct State {
   // Position
