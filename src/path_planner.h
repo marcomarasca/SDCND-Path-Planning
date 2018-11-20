@@ -21,13 +21,11 @@ const double TRAJECTORY_STEP_DT = 0.02;
 // Number of points for the trajectory
 const size_t TRAJECTORY_STEPS = TRAJECTORY_T / TRAJECTORY_STEP_DT;
 // Max speed in m/s
-const double MAX_SPEED = Mph2ms(100);
+const double MAX_SPEED = Mph2ms(49);
 // Min speed in m/s
 const double MIN_SPEED = Mph2ms(15);
 // Max acceleration in m/s^2
 const double MAX_ACC = 10;
-// Max distance that can be travelled
-const double MAX_DISTANCE = MAX_SPEED * TRAJECTORY_T + 0.5 * MAX_ACC * std::pow(TRAJECTORY_T, 2);
 // Ego vehicle range in meters for vehicles detection (in front and behind)
 const double RANGE = 75;
 // Min distance to front vehicle, TODO should be paremeterized by velocity
@@ -39,6 +37,9 @@ using LaneTraffic = std::vector<Vehicle>;
 using Traffic = std::vector<LaneTraffic>;
 
 class PathPlanner {
+ private:
+  static double MaxSpeed(size_t lane_index);
+
  private:
   const Map &map;
   Vehicle ego;
@@ -62,7 +63,7 @@ class PathPlanner {
 
   double TrajectoryCost(const FTrajectory &trajectory) const;
   FTrajectory PredictTrajectory(const Vehicle &vehicle, size_t steps) const;
-  Frenet GetTarget(size_t lane, double t) const;
+  Frenet PredictTarget(size_t lane, double t) const;
   bool VehicleAhead(size_t lane, Vehicle &vehicle) const;
 };
 

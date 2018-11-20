@@ -29,6 +29,7 @@ class Map {
  public:
   static size_t LaneIndex(double d);
   static double LaneDisplacement(size_t lane_index);
+  static bool InvalidLane(size_t lane_index);
   static double Mod(double s);
   static double ModDistance(double s1, double s2);
 

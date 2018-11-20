@@ -4,6 +4,11 @@
 #include <set>
 #include "utils.h"
 
+double PathPlanning::PathPlanner::MaxSpeed(size_t lane_index) { 
+  // TODO check this workaround
+  return MAX_SPEED - 1 * lane_index; 
+}
+
 PathPlanning::PathPlanner::PathPlanner(Map &map, size_t lane_n)
     : map(map), ego(EGO_ID), traffic(lane_n), trajectory_generator(TRAJECTORY_STEP_DT) {}
 
@@ -16,10 +21,10 @@ void PathPlanning::PathPlanner::Update(const json &telemetry) {
 }
 
 void PathPlanning::PathPlanner::UpdateEgo(const json &telemetry) {
-  const std::size_t steps_to_go = telemetry["previous_path_x"].size();
-  const std::size_t steps_consumed = this->ego.trajectory.size() - steps_to_go;
+  const int steps_to_go = telemetry["previous_path_x"].size();
+  const int steps_consumed = this->ego.trajectory.size() - steps_to_go;
 
-  const double s_p = Map::Mod(telemetry["s"]);
+  const double s_p = telemetry["s"];
   const double s_v = Mph2ms(telemetry["speed"]);
   const double d_p = telemetry["d"];
 
@@ -35,10 +40,12 @@ void PathPlanning::PathPlanner::UpdateEgo(const json &telemetry) {
     this->ego.trajectory.clear();
   } else if (steps_consumed > 0) {
     // Use data from the previous trajectory
-    state = this->ego.trajectory[steps_consumed - 1];
+    state = this->ego.StateAt(steps_consumed - 1);
   }
 
   this->ego.UpdateState(state);
+  std::cout << "State: (S: " << this->ego.state.s.p << ", D: " << this->ego.state.d.p
+            << ", S_V: " << this->ego.state.s.v << ", D_V: " << this->ego.state.d.v << ")" << std::endl;
 }
 
 void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
@@ -56,10 +63,16 @@ void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
     // Vehicle telemetry: id, x, y, vx, vy, s, d,
     int id = vehicle_telemetry[0];
 
-    double s_p = Map::Mod(vehicle_telemetry[5]);
+    double s_p = vehicle_telemetry[5];
     double d_p = vehicle_telemetry[6];
 
     if (d_p < 0) {  // Vehicle not on the rendered yet
+      continue;
+    }
+
+    size_t lane = Map::LaneIndex(d_p);
+
+    if (Map::InvalidLane(lane)) {
       continue;
     }
 
@@ -74,7 +87,6 @@ void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
 
     Frenet state{{s_p, frenet_v.first, 0.0}, {d_p, frenet_v.second, 0.0}};
 
-    size_t lane = Map::LaneIndex(state.d.p);
     this->traffic[lane].emplace_back(id, state);
   }
 
@@ -120,7 +132,7 @@ void PathPlanning::PathPlanner::UpdatePlan() {
   for (size_t target_lane : available_lanes) {
     std::cout << "Computing cost for lane: " << target_lane << std::endl;
     // Generate a candidate trajectory
-    Frenet target = this->GetTarget(target_lane, TRAJECTORY_T);
+    Frenet target = this->PredictTarget(target_lane, TRAJECTORY_T);
     FTrajectory trajectory = this->trajectory_generator.Generate(this->ego.state, target, TRAJECTORY_STEPS);
     const double trajectory_cost = this->TrajectoryCost(trajectory);
     std::cout << "Cost for lane " << target_lane << ": " << trajectory_cost << std::endl;
@@ -140,52 +152,61 @@ void PathPlanning::PathPlanner::UpdatePlan() {
 }
 
 double PathPlanning::PathPlanner::TrajectoryCost(const FTrajectory &trajectory) const {
-  double cost = 0.0;
-
   if (trajectory.empty()) {
     return std::numeric_limits<double>::max();
   }
 
-  // Trajectory time
-  double t = trajectory.size() * TRAJECTORY_STEP_DT;
-
-  // Collision cost
   size_t start_lane = Map::LaneIndex(trajectory.front().d.p);
   size_t target_lane = Map::LaneIndex(trajectory.back().d.p);
-  std::vector<Vehicle> vehicles;
-  vehicles.reserve(this->traffic[start_lane].size() + this->traffic[target_lane].size());
-  vehicles.insert(vehicles.begin(), this->traffic[start_lane].begin(), this->traffic[start_lane].end());
-  vehicles.insert(vehicles.begin(), this->traffic[target_lane].begin(), this->traffic[target_lane].end());
 
+  if (Map::InvalidLane(start_lane) || Map::InvalidLane(target_lane)) {
+    std::cout << "[WARNING]: Invalid lane (" << start_lane << ", " << target_lane << ")" << std::endl;
+    return std::numeric_limits<double>::max();
+  }
+
+  // Collision cost
   double min_distance = std::numeric_limits<double>::max();
+  bool collision = false;
   Vehicle closest_vehicle(EGO_ID);
-  for (auto &vehicle : vehicles) {
-    double closest_distance = std::numeric_limits<double>::max();
-    // Check the vehicle trajectory
-    const FTrajectory &shortest = (trajectory.size() < vehicle.trajectory.size()) ? trajectory : vehicle.trajectory;
-    const FTrajectory &longest = (trajectory.size() < vehicle.trajectory.size()) ? vehicle.trajectory : trajectory;
-    for (size_t i = 0; i < shortest.size(); ++i) {
-      double distance_at_t = Distance(shortest[i].d.p, shortest[i].s.p, longest[i].d.p, longest[i].s.p);
-      if (distance_at_t < closest_distance) {
-        closest_distance = distance_at_t;
+  for (const auto &lane_traffic : this->traffic) {
+    for (const auto &vehicle : lane_traffic) {
+      double closest_distance = std::numeric_limits<double>::max();
+      // Check the vehicle trajectory
+      auto &other_trajectory = vehicle.trajectory;
+      for (size_t i = 0; i < trajectory.size(); ++i) {
+        double s_distance = std::fabs(Map::ModDistance(trajectory[i].s.p, other_trajectory[i].s.p));
+        double d_distance = std::fabs(trajectory[i].d.p - other_trajectory[i].d.p);
+        double distance_at_t = Distance(0, 0, d_distance, s_distance);
+        if (distance_at_t < closest_distance) {
+          closest_distance = distance_at_t;
+        }
+        if (s_distance < VEHICLE_LENGTH * 2 &&
+            Map::LaneIndex(trajectory[i].d.p) == Map::LaneIndex(other_trajectory[i].d.p)) {
+          std::cout << "[COLLISION]: (" << trajectory[i].s.p << ", " << trajectory[i].d.p << ") - ("
+                    << other_trajectory[i].s.p << ", " << other_trajectory[i].d.p << ")" << std::endl;
+          collision = true;
+          break;
+        }
       }
-      if (distance_at_t < VEHICLE_LENGTH * 2) {
-        std::cout << "[COLLISION]: (" << shortest[i].s.p << ", " << shortest[i].d.p << ") - (" << longest[i].s.p << ", "
-                  << longest[i].d.p << ")" << std::endl;
+      if (closest_distance < min_distance) {
+        min_distance = closest_distance;
+        closest_vehicle = vehicle;
+      }
+      if (collision) {
+        break;
       }
     }
-    if (closest_distance < min_distance) {
-      min_distance = closest_distance;
-      closest_vehicle = vehicle;
+    if (collision) {
+      break;
     }
   }
 
   double collision_cost = 0.0;
   double buffer_cost = 0.0;
 
-  if (min_distance < VEHICLE_LENGTH * 2) {
+  if (collision) {
     collision_cost = 1.0;
-    std::cout << "[WARNING]: Collision on trajectory with vehicle " << closest_vehicle.id << "("
+    std::cout << "[WARNING]: Collision on trajectory with vehicle " << closest_vehicle.id << " ("
               << closest_vehicle.state.s.p << ", " << closest_vehicle.state.s.v << ")" << std::endl;
   } else {
     collision_cost = 0.0;
@@ -197,7 +218,7 @@ double PathPlanning::PathPlanner::TrajectoryCost(const FTrajectory &trajectory) 
   std::cout << "Danger cost: " << buffer_cost << " (Min distance: " << min_distance << ")" << std::endl;
 
   // Traffic speed cost
-  double traffic_cost = 0.0;
+  double lane_speed_cost = 0.0;
   double lane_speed = std::numeric_limits<double>::max();
   if (!this->traffic[target_lane].empty()) {
     lane_speed = 0.0;
@@ -210,10 +231,25 @@ double PathPlanning::PathPlanner::TrajectoryCost(const FTrajectory &trajectory) 
     }
     if (vehicles_n > 0) {
       lane_speed /= vehicles_n;
-      traffic_cost = Logistic((MAX_SPEED - lane_speed) / MAX_SPEED);
+      lane_speed_cost = Logistic((MAX_SPEED - lane_speed) / MAX_SPEED);
     }
   }
-  std::cout << "Traffic cost: " << traffic_cost << "(Lane speed: " << lane_speed << ")" << std::endl;
+  std::cout << "Lane speed cost: " << lane_speed_cost << " (Lane speed ahead: " << lane_speed << ")" << std::endl;
+
+  // Lane traffic cost
+  double lane_traffic_cost = 0.0;
+  size_t tot_traffic =
+      std::accumulate(this->traffic.begin(), this->traffic.end(), 0,
+                      [](const size_t &value, const LaneTraffic &lane_traffic) { return value + lane_traffic.size(); });
+  double lane_traffic = this->traffic[target_lane].size();
+  if (tot_traffic > 0) {
+    lane_traffic_cost = Logistic((double)this->traffic[target_lane].size() / tot_traffic);
+  }
+  std::cout << "Traffic cost: " << lane_traffic_cost << "(Lane traffic: " << lane_traffic
+            << ", Tot Traffic: " << tot_traffic << ")" << std::endl;
+
+  // Trajectory time
+  double t = trajectory.size() * TRAJECTORY_STEP_DT;
   // Average speed cost, rewards higher average speed
   double speed = Map::ModDistance(trajectory.back().s.p, this->ego.state.s.p) / t;
   double speed_cost = Logistic((MAX_SPEED - speed) / MAX_SPEED);
@@ -225,51 +261,61 @@ double PathPlanning::PathPlanner::TrajectoryCost(const FTrajectory &trajectory) 
   std::cout << "Change plan cost: " << change_plan_cost << std::endl;
 
   double unfinished_plan_cost = plan_lane != start_lane ? 1.0 : 0.0;
-  std::cout << "Unfinished plan cost: " << change_plan_cost << std::endl;
+  std::cout << "Unfinished plan cost: " << unfinished_plan_cost << std::endl;
 
+  double cost = 0.0;
   cost += 10000 * collision_cost;
-  cost += 1000 * unfinished_plan_cost;
+  cost += 5000 * unfinished_plan_cost;
   cost += 500 * speed_cost;
-  cost += 300 * traffic_cost;
+  cost += 250 * lane_traffic_cost;
+  cost += 200 * lane_speed_cost;
   cost += 100 * buffer_cost;
-  cost += 10 * change_plan_cost;
+  cost += 50 * change_plan_cost;
 
   return cost;
 }
 
-PathPlanning::Frenet PathPlanning::PathPlanner::GetTarget(size_t lane, double t) const {
+PathPlanning::Frenet PathPlanning::PathPlanner::PredictTarget(size_t target_lane, double t) const {
   const State &start_s = this->ego.state.s;
   const State &start_d = this->ego.state.d;
 
+  size_t start_lane = this->ego.GetLane();
+
+  int lane_diff = static_cast<int>(target_lane) - static_cast<int>(start_lane);
+  const double max_speed = MaxSpeed(target_lane);
   // Limits the acceleration when going slower
-  const double max_acc = start_s.v < MIN_SPEED ? MAX_ACC / 2.0 : MAX_ACC;
+  const double max_acc = start_s.v < MIN_SPEED ? MAX_ACC / 2.0 : MAX_ACC - 0.2 * std::abs(lane_diff);
+  std::cout << "Lane " << target_lane << " Max speed: " << max_speed << ", Max Acc: " << max_acc << std::endl;
   // Velocity: v1 + a * t
-  double s_v = std::min(MAX_SPEED, start_s.v + max_acc * t);
+  double s_v = std::min(max_speed, start_s.v + max_acc * t);
   // Projected Acceleration: (v2 - v1) / t
   double acc = (s_v - start_s.v) / t;
   // Constant acceleration: s1 + (v1 * t + 0.5 * a * t^2)
-  // TODO should this be wrapped for circuit s?
-  double s_p = start_s.p + start_s.v * t + 0.5 * acc * std::pow(t, 2);
+  double s_p_delta = start_s.v * t + 0.5 * acc * std::pow(t, 2);
   // Final accelleration can be the projected one if going less than the speed limit
-  double s_a = s_v < MAX_SPEED ? acc : 0.0;
+  double s_a = 0.0;  // s_v < max_speed ? (max_speed - s_v) / TRAJECTORY_STEP_DT : 0.0;
 
   // If we have a vehicle ahead adapt the speed to avoid collisions
   Vehicle ahead(EGO_ID);
-  if (this->VehicleAhead(lane, ahead)) {
-    const double distance = Map::ModDistance(ahead.state.s.p, this->ego.state.s.p);
+  if (this->VehicleAhead(target_lane, ahead)) {
+    const double distance = Map::ModDistance(ahead.state.s.p, start_s.p);
     std::cout << "[WARNING]: Vehicle " << ahead.id << " ahead at " << distance << " m" << std::endl;
-    // Computes the distance at time t
-    const double distance_at_t = Map::ModDistance(ahead.trajectory.back().s.p, this->ego.StateAt(t).s.p);
-    if (distance_at_t < SAFE_DISTANCE) {
-      std::cout << "[WARNING]: Following " << ahead.id << "(Distance at t: " << distance_at_t << ")" << std::endl;
-      s_v = std::min(MAX_SPEED, ahead.state.s.v);  // Follow the car ahead
+    // Max s delta at time t according to front vehicle position at t
+    const double max_s_p_delta = Map::ModDistance(ahead.trajectory.back().s.p - SAFE_DISTANCE, start_s.p);
+    if (max_s_p_delta < s_p_delta) {
+      std::cout << "[WARNING]: Following " << ahead.id << "(Delta: " << s_p_delta << ", Max: " << max_s_p_delta << ")"
+                << std::endl;
+      s_p_delta = max_s_p_delta;
+      s_v = std::min(s_v, ahead.state.s.v);  // Follow the car ahead
       s_a = 0.0;
-      // TODO check for wrap around track (e.g. s might be less than start)
-      s_p = ahead.trajectory.back().s.p - SAFE_DISTANCE;
     }
   }
 
-  const double d_p = Map::LaneDisplacement(lane);
+  const double s_p = start_s.p + s_p_delta;
+  double d_p = Map::LaneDisplacement(target_lane);
+  if (std::fabs(d_p - start_d.p) >= LANE_WIDTH) {
+    d_p = start_d.p + lane_diff * LANE_WIDTH;
+  }
   const double d_v = 0.0;
   const double d_a = 0.0;
 
@@ -277,6 +323,9 @@ PathPlanning::Frenet PathPlanning::PathPlanner::GetTarget(size_t lane, double t)
 }
 
 bool PathPlanning::PathPlanner::VehicleAhead(size_t lane, Vehicle &ahead) const {
+  if (Map::InvalidLane(lane)) {
+    return false;
+  }
   auto &lane_traffic = this->traffic[lane];
   bool found = false;
   // Lane vehicles are sorted by distance to the ego vehicle

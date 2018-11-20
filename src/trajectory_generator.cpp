@@ -9,7 +9,7 @@ using Eigen::Vector3d;
 PathPlanning::TrajectoryGenerator::TrajectoryGenerator(double step_dt) : step_dt(step_dt) {}
 
 PathPlanning::FTrajectory PathPlanning::TrajectoryGenerator::Generate(const Frenet &start, const Frenet &target,
-                                                                     size_t steps) const {
+                                                                      size_t steps) const {
   const double T = steps * step_dt;
 
   std::cout << "Generating trajectory for t: " << T << "s (" << steps << " steps)" << std::endl;
@@ -23,6 +23,7 @@ PathPlanning::FTrajectory PathPlanning::TrajectoryGenerator::Generate(const Fren
   const Coeff d_a_coeff = this->Differentiate(d_v_coeff);
 
   PathPlanning::FTrajectory trajectory;
+  trajectory.reserve(steps);
   // Computes the values for each step of the trajectory
   for (size_t i = 1; i <= steps; ++i) {
     const double t = i * step_dt;
@@ -30,16 +31,14 @@ PathPlanning::FTrajectory PathPlanning::TrajectoryGenerator::Generate(const Fren
     const double s_p = this->Eval(t, s_p_coeff);
     const double s_v = this->Eval(t, s_v_coeff);
     const double s_a = this->Eval(t, s_a_coeff);
-
+    
     const double d_p = this->Eval(t, d_p_coeff);
     const double d_v = this->Eval(t, d_v_coeff);
     const double d_a = this->Eval(t, d_a_coeff);
 
-    // TODO Check for distance constraint violation (e.g. using max accelaration and velocity)
-
     const State s{s_p, s_v, s_a};
     const State d{d_p, d_v, d_a};
-
+    
     trajectory.emplace_back(s, d);
   }
 
