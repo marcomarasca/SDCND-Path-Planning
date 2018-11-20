@@ -8,7 +8,7 @@ PathPlanning::Vehicle::Vehicle(int id, const Frenet &state) : id(id), state(stat
 size_t PathPlanning::Vehicle::GetLane() const { return Map::LaneIndex(this->state.d.p); }
 
 PathPlanning::Frenet PathPlanning::Vehicle::StateAt(size_t trajectory_step) const {
-  assert(trajectory_step >= 0 && trajectory_step < this->trajectory.size() - 1);
+  assert(trajectory_step < this->trajectory.size());
   return this->trajectory[trajectory_step];
 }
 
@@ -21,9 +21,13 @@ void PathPlanning::Vehicle::UpdateTrajectory(const PathPlanning::FTrajectory &tr
   this->trajectory = trajectory;
 }
 
-void PathPlanning::Vehicle::ResetTrajectory() {
-  this->trajectory.clear();
+void PathPlanning::Vehicle::ForwardState(size_t trajectory_steps) {
+  assert(trajectory_steps < this->trajectory.size());
+  this->state = this->trajectory[trajectory_steps];
+  this->trajectory.erase(this->trajectory.begin(), this->trajectory.begin() + trajectory_steps + 1);
 }
+
+void PathPlanning::Vehicle::ResetTrajectory() { this->trajectory.clear(); }
 
 void PathPlanning::Vehicle::PositionUpdated() { this->state.s.p = Map::Mod(this->state.s.p); }
 

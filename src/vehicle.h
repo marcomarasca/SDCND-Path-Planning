@@ -27,6 +27,7 @@ class Vehicle {
 
   void UpdateState(const Frenet &state);
   void UpdateTrajectory(const FTrajectory &trajectory);
+  void ForwardState(size_t trajectory_steps);
 
   void ResetTrajectory();
 };

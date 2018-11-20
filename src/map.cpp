@@ -41,8 +41,6 @@ void PathPlanning::Map::LoadWaypoints(std::string file_path) {
   std::vector<double> waypoints_dx;
   std::vector<double> waypoints_dy;
 
-  double saveFirstLine = true;
-  double x0, y0, dx0, dy0;
   double x, y, s, dx, dy;
 
   std::string line;
@@ -55,14 +53,6 @@ void PathPlanning::Map::LoadWaypoints(std::string file_path) {
     iss >> dx;
     iss >> dy;
 
-    if (saveFirstLine) {
-      x0 = x;
-      y0 = y;
-      dx0 = dx;
-      dy0 = dy;
-      saveFirstLine = false;
-    }
-
     waypoints_x.emplace_back(x);
     waypoints_y.emplace_back(y);
     waypoints_s.emplace_back(s);
@@ -72,11 +62,11 @@ void PathPlanning::Map::LoadWaypoints(std::string file_path) {
 
   map_file.close();
 
-  waypoints_x.emplace_back(x0);
-  waypoints_y.emplace_back(y0);
+  waypoints_x.emplace_back(waypoints_x[0]);
+  waypoints_y.emplace_back(waypoints_y[0]);
   waypoints_s.emplace_back(MAP_MAX_S);
-  waypoints_dx.emplace_back(dx0);
-  waypoints_dy.emplace_back(dy0);
+  waypoints_dx.emplace_back(waypoints_dx[0]);
+  waypoints_dy.emplace_back(waypoints_dy[0]);
 
   this->spline_x.set_points(waypoints_s, waypoints_x);
   this->spline_y.set_points(waypoints_s, waypoints_y);

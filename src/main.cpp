@@ -34,7 +34,11 @@ void ProcessTelemetry(uWS::WebSocket<uWS::SERVER> &ws, PathPlanning::PathPlanner
   // Updates the state of the planner using the data from the telemetry
   PathPlanning::TimePoint update_s = timer.Start();
 
-  planner.Update(telemetry, PathPlanning::Timer::ToMilliseconds(timer.AverageDuration()).count());
+  double processing_time = PathPlanning::Ms2s(PathPlanning::Timer::ToMilliseconds(timer.AverageDuration()).count());
+
+  processing_time = std::max(processing_time, PathPlanning::MIN_PROCESSING_TIME);
+
+  planner.Update(telemetry, processing_time);
 
   PathPlanning::Duration update_d = timer.Eval(update_s);
 

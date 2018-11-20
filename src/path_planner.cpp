@@ -30,16 +30,17 @@ void PathPlanning::PathPlanner::UpdateEgo(const json &telemetry) {
   std::cout << "Steps Consumed: " << steps_consumed << std::endl;
   std::cout << "Telemetry: (S: " << state.s.p << ", D: " << state.d.p << ", Speed: " << state.s.v << ")" << std::endl;
 
+  this->ego.UpdateState(state);
+
   if (steps_to_go == 0) {
     // Reset plan (keeps current state as target)
     this->behaviour_planner.ResetPlan(state);
     this->ego.ResetTrajectory();
   } else if (steps_consumed > 0) {
     // Use data from the previous trajectory
-    state = this->ego.StateAt(steps_consumed - 1);
+    this->ego.ForwardState(steps_consumed - 1);
   }
 
-  this->ego.UpdateState(state);
   std::cout << "State: (S: " << this->ego.state.s.p << ", D: " << this->ego.state.d.p
             << ", S_V: " << this->ego.state.s.v << ", D_V: " << this->ego.state.d.v << ")" << std::endl;
 }
@@ -106,9 +107,8 @@ void PathPlanning::PathPlanner::UpdatePredictions() {
 }
 
 void PathPlanning::PathPlanner::UpdatePlan(double processing_time) {
-  std::cout << "Processing time: " << processing_time << " ms (~ " << (processing_time / 1000 / TRAJECTORY_STEP_DT)
-            << " steps)" << std::endl;
-  FTrajectory next_trajectory = this->behaviour_planner.UpdatePlan(this->ego, this->traffic, TRAJECTORY_STEPS);
+  FTrajectory next_trajectory =
+      this->behaviour_planner.UpdatePlan(this->ego, this->traffic, TRAJECTORY_STEPS, processing_time);
   if (!next_trajectory.empty()) {
     this->ego.UpdateTrajectory(next_trajectory);
   }
