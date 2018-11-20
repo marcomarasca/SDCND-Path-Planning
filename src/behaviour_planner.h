@@ -65,7 +65,7 @@ class BehaviourPlanner {
   /**
    * Evaluates the given trajectory considering the sorrounding traffic
    */
-  double EvaluateTrajectory(const Vehicle &ego, const Traffic &traffic, const FTrajectory &trajectory) const;
+  double EvaluateTrajectory(const FTrajectory &trajectory, const Traffic &traffic) const;
 
   /**
    * Returns true if a vehicle is ahead of the given ego vehicle in the given lane, populates the ahead vehicle with the

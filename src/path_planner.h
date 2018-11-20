@@ -19,7 +19,7 @@ const int EGO_ID = -1;
 // Ego vehicle range in meters for vehicles detection (in front and behind)
 const double RANGE = 80;
 // Total time in seconds for the trajectory
-const double TRAJECTORY_T = 2;
+const double TRAJECTORY_T = 2.0;
 // Delta t between trajectory points in seconds (same as simulator controller update rate)
 const double TRAJECTORY_STEP_DT = 0.02;
 // Number of points for the trajectory

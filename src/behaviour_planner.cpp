@@ -24,7 +24,7 @@ PathPlanning::FTrajectory PathPlanning::BehaviourPlanner::UpdatePlan(const Vehic
     // Generate a candidate trajectory
     Frenet target = this->PredictTarget(ego, traffic, target_lane, t);
     FTrajectory trajectory = this->GenerateTrajectory(ego, target, trajectory_steps, processing_time);
-    const double trajectory_cost = this->EvaluateTrajectory(ego, traffic, trajectory);
+    const double trajectory_cost = this->EvaluateTrajectory(trajectory, traffic);
     std::cout << "Cost for lane " << target_lane << ": " << trajectory_cost << std::endl;
     if (trajectory_cost < min_cost) {
       min_cost = trajectory_cost;
@@ -143,8 +143,7 @@ bool PathPlanning::BehaviourPlanner::GetVehicleAhead(const Vehicle &ego, const T
   return found;
 }
 
-double PathPlanning::BehaviourPlanner::EvaluateTrajectory(const Vehicle &ego, const Traffic &traffic,
-                                                          const FTrajectory &trajectory) const {
+double PathPlanning::BehaviourPlanner::EvaluateTrajectory(const FTrajectory &trajectory, const Traffic &traffic) const {
   if (trajectory.empty()) {
     return std::numeric_limits<double>::max();
   }
@@ -216,8 +215,9 @@ double PathPlanning::BehaviourPlanner::EvaluateTrajectory(const Vehicle &ego, co
   size_t lane_traffic = 0;
   if (!traffic[target_lane].empty()) {
     lane_speed = 0.0;
+    double start_s = trajectory.front().s.p;
     for (auto &vehicle : traffic[target_lane]) {
-      if (Map::ModDistance(vehicle.state.s.p, ego.state.s.p) > 0) {
+      if (Map::ModDistance(vehicle.state.s.p, start_s) > 0) {
         lane_speed += vehicle.state.s.v;
         lane_traffic++;
       }
@@ -243,7 +243,7 @@ double PathPlanning::BehaviourPlanner::EvaluateTrajectory(const Vehicle &ego, co
   // Trajectory time
   double t = trajectory.size() * this->trajectory_generator.step_dt;
   // Average speed cost, rewards higher average speed
-  double speed = Map::ModDistance(trajectory.back().s.p, ego.state.s.p) / t;
+  double speed = Map::ModDistance(trajectory.back().s.p, trajectory.front().s.p) / t;
   double speed_cost = Logistic((MAX_SPEED - speed) / MAX_SPEED);
   std::cout << "Speed cost: " << speed_cost << " (Avg speed: " << speed << ")" << std::endl;
 
