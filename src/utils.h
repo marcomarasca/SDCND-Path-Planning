@@ -3,8 +3,8 @@
 
 #include <math.h>
 #include <chrono>
-#include <vector>
 #include <string>
+#include <vector>
 
 // for portability of M_PI (Vis Studio, MinGW, etc.)
 #ifndef M_PI
@@ -14,6 +14,8 @@
 namespace PathPlanning {
 
 const std::string LOG_BUFER = "  ";
+const size_t COST_LOG_BUFFER = 22;
+const size_t COST_LOG_W = 10;
 
 struct State {
   // Position
@@ -34,7 +36,11 @@ struct Frenet {
   Frenet(const State &s, const State &d) : s(s), d(d){};
 };
 
+class Vehicle;
+
 using FTrajectory = std::vector<Frenet>;
+using LaneTraffic = std::vector<Vehicle>;
+using Traffic = std::vector<LaneTraffic>;
 using TimePoint = std::chrono::time_point<std::chrono::steady_clock, std::chrono::nanoseconds>;
 using Duration = std::chrono::nanoseconds;
 

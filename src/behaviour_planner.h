@@ -1,24 +1,19 @@
 #ifndef PP_BEHAVIOUR_PLANNER_H
 #define PP_BEHAVIOUR_PLANNER_H
 
+#include "trajectory_evaluator.h"
 #include "trajectory_generator.h"
 #include "utils.h"
 #include "vehicle.h"
 
 namespace PathPlanning {
 
-const size_t COST_LOG_BUFFER = 22;
-const size_t COST_LOG_W = 10;
-
 // Max speed in m/s
-const double MAX_SPEED = Mph2ms(48);
+const double MAX_SPEED = Mph2ms(49);
 // Min speed in m/s
 const double MIN_SPEED = Mph2ms(15);
 // Max acceleration in m/s^2
 const double MAX_ACC = 10;
-
-using LaneTraffic = std::vector<Vehicle>;
-using Traffic = std::vector<LaneTraffic>;
 
 class BehaviourPlanner {
   /**
@@ -28,6 +23,7 @@ class BehaviourPlanner {
 
  private:
   const TrajectoryGenerator &trajectory_generator;
+  const TrajectoryEvaluator trajectory_evaluator;
   // Current plan
   Frenet plan;
 

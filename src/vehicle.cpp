@@ -25,6 +25,7 @@ void PathPlanning::Vehicle::ForwardState(size_t trajectory_step) {
   assert(trajectory_step < this->trajectory.size());
   this->state = this->trajectory[trajectory_step];
   this->trajectory.erase(this->trajectory.begin(), this->trajectory.begin() + trajectory_step + 1);
+  this->PositionUpdated();
 }
 
 void PathPlanning::Vehicle::ResetTrajectory() { this->trajectory.clear(); }
