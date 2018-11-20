@@ -34,7 +34,7 @@ void ProcessTelemetry(uWS::WebSocket<uWS::SERVER> &ws, PathPlanning::PathPlanner
   // Updates the state of the planner using the data from the telemetry
   PathPlanning::TimePoint update_s = timer.Start();
 
-  planner.Update(telemetry);
+  planner.Update(telemetry, PathPlanning::Timer::ToMilliseconds(timer.AverageDuration()).count());
 
   PathPlanning::Duration update_d = timer.Eval(update_s);
 

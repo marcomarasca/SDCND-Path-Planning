@@ -13,14 +13,13 @@ const double MAX_SPEED = Mph2ms(49);
 const double MIN_SPEED = Mph2ms(15);
 // Max acceleration in m/s^2
 const double MAX_ACC = 10;
-// Min distance to front vehicle, TODO should be parameterized by velocity
-const double SAFE_DISTANCE = VEHICLE_LENGTH * 4;
 
 using LaneTraffic = std::vector<Vehicle>;
 using Traffic = std::vector<LaneTraffic>;
 
 class BehaviourPlanner {
  private:
+  static double SafeDistance(double v);
   const TrajectoryGenerator &trajectory_generator;
   Frenet plan;
 
@@ -36,7 +35,7 @@ class BehaviourPlanner {
   std::vector<size_t> AvailableLanes(const Vehicle &vehicle) const;
   double TrajectoryCost(const Vehicle &ego, const Traffic &traffic, const FTrajectory &trajectory) const;
   Frenet PredictTarget(const Vehicle &ego, const Traffic &traffic, size_t target_lane, double t) const;
-  bool VehicleAhead(const Vehicle &ego, const Traffic &traffic, Vehicle &vehicle) const;
+  bool VehicleAhead(const Vehicle &ego, const Traffic &traffic, size_t target_lane, Vehicle &ahead) const;
 };
 
 }  // namespace PathPlanning

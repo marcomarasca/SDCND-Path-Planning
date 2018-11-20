@@ -3,6 +3,10 @@
 #include <numeric>
 #include "map.h"
 
+double PathPlanning::BehaviourPlanner::SafeDistance(double v) {
+  return std::pow(v, 2) / (2 * MAX_ACC) + 2 * VEHICLE_LENGTH;
+}
+
 PathPlanning::BehaviourPlanner::BehaviourPlanner(const TrajectoryGenerator &trajectory_generator)
     : trajectory_generator(trajectory_generator) {}
 
@@ -61,7 +65,7 @@ PathPlanning::Frenet PathPlanning::BehaviourPlanner::PredictTarget(const Vehicle
   size_t start_lane = Map::LaneIndex(start.d.p);
 
   int lane_diff = static_cast<int>(target_lane) - static_cast<int>(start_lane);
-  const double max_speed = MAX_SPEED - 1 * target_lane;
+  const double max_speed = MAX_SPEED;
   // Limits the acceleration when going slower
   const double max_acc = start.s.v < MIN_SPEED ? MAX_ACC / 2.0 : MAX_ACC - 0.2 * std::abs(lane_diff);
   std::cout << "Lane " << target_lane << " Max speed: " << max_speed << ", Max Acc: " << max_acc << std::endl;
@@ -76,13 +80,15 @@ PathPlanning::Frenet PathPlanning::BehaviourPlanner::PredictTarget(const Vehicle
 
   // If we have a vehicle ahead adapt the speed to avoid collisions
   Vehicle ahead(-1);
-  if (this->VehicleAhead(ego, traffic, ahead)) {
+  if (this->VehicleAhead(ego, traffic, target_lane, ahead)) {
     const double distance = Map::ModDistance(ahead.state.s.p, start.s.p);
     std::cout << "[WARNING]: Vehicle " << ahead.id << " ahead at " << distance << " m" << std::endl;
+    const double safe_distance = SafeDistance(ahead.trajectory.back().s.v);
+    std::cout << "[WARNING]: Predicted safe distance: " << safe_distance << " m" << std::endl;
     // Max s delta at time t according to front vehicle position at t
-    const double max_s_p_delta = Map::ModDistance(ahead.trajectory.back().s.p - SAFE_DISTANCE, start.s.p);
+    const double max_s_p_delta = Map::ModDistance(ahead.trajectory.back().s.p - safe_distance, start.s.p);
     if (max_s_p_delta < s_p_delta) {
-      std::cout << "[WARNING]: Following " << ahead.id << "(Delta: " << s_p_delta << ", Max: " << max_s_p_delta << ")"
+      std::cout << "[WARNING]: Following " << ahead.id << " (Delta: " << s_p_delta << ", Max: " << max_s_p_delta << ")"
                 << std::endl;
       s_p_delta = max_s_p_delta;
       s_v = std::min(s_v, ahead.state.s.v);  // Follow the car ahead
@@ -102,11 +108,8 @@ PathPlanning::Frenet PathPlanning::BehaviourPlanner::PredictTarget(const Vehicle
   return {{s_p, s_v, s_a}, {d_p, d_v, d_a}};
 }
 
-bool PathPlanning::BehaviourPlanner::VehicleAhead(const Vehicle &ego, const Traffic &traffic, Vehicle &ahead) const {
-  size_t target_lane = ego.GetLane();
-  if (Map::InvalidLane(target_lane)) {
-    return false;
-  }
+bool PathPlanning::BehaviourPlanner::VehicleAhead(const Vehicle &ego, const Traffic &traffic, size_t target_lane,
+                                                  Vehicle &ahead) const {
   bool found = false;
   for (auto &vehicle : traffic[target_lane]) {
     double distance = Map::ModDistance(vehicle.state.s.p, ego.state.s.p);
