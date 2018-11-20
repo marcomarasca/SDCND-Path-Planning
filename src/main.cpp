@@ -38,14 +38,14 @@ void ProcessTelemetry(uWS::WebSocket<uWS::SERVER> &ws, PathPlanning::PathPlanner
 
   PathPlanning::Duration update_d = timer.Eval(update_s);
 
-  PathPlanning::Trajectory trajectory = planner.getGlobalCoordTrajectory();
+  PathPlanning::CTrajectory trajectory = planner.GetTrajectory();
 
   std::cout << "Time: " << PathPlanning::Timer::ToMilliseconds(update_d).count() << " ms" << std::endl;
   std::cout << "Avg Time: " << PathPlanning::Timer::ToMilliseconds(timer.AverageDuration()).count() << " ms"
             << std::endl;
 
   json msgJson;
- 
+
   msgJson["next_x"] = trajectory.first;
   msgJson["next_y"] = trajectory.second;
 

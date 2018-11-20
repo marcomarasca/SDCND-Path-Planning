@@ -6,7 +6,7 @@
 using Eigen::Matrix3d;
 using Eigen::Vector3d;
 
-PathPlanning::TrajectoryGenerator::TrajectoryGenerator(double step_dt) : step_dt(step_dt) {}
+PathPlanning::TrajectoryGenerator::TrajectoryGenerator(const Map &map, double step_dt) : map(map), step_dt(step_dt) {}
 
 PathPlanning::FTrajectory PathPlanning::TrajectoryGenerator::Generate(const Frenet &start, const Frenet &target,
                                                                       size_t steps) const {
@@ -31,18 +31,31 @@ PathPlanning::FTrajectory PathPlanning::TrajectoryGenerator::Generate(const Fren
     const double s_p = this->Eval(t, s_p_coeff);
     const double s_v = this->Eval(t, s_v_coeff);
     const double s_a = this->Eval(t, s_a_coeff);
-    
+
     const double d_p = this->Eval(t, d_p_coeff);
     const double d_v = this->Eval(t, d_v_coeff);
     const double d_a = this->Eval(t, d_a_coeff);
 
     const State s{s_p, s_v, s_a};
     const State d{d_p, d_v, d_a};
-    
+
     trajectory.emplace_back(s, d);
   }
 
   return trajectory;
+}
+
+PathPlanning::CTrajectory PathPlanning::TrajectoryGenerator::FrenetToCartesian(const FTrajectory &trajectory) const {
+  std::vector<double> next_x_vals;
+  std::vector<double> next_y_vals;
+
+  for (auto &step : trajectory) {
+    auto coord = this->map.FrenetToCartesian(step.s.p, step.d.p);
+    next_x_vals.emplace_back(coord.first);
+    next_y_vals.emplace_back(coord.second);
+  }
+
+  return CTrajectory({next_x_vals, next_y_vals});
 }
 
 PathPlanning::Coeff PathPlanning::TrajectoryGenerator::Differentiate(const Coeff &coefficients) const {

@@ -1,0 +1,44 @@
+#ifndef PP_BEHAVIOUR_PLANNER_H
+#define PP_BEHAVIOUR_PLANNER_H
+
+#include "trajectory_generator.h"
+#include "utils.h"
+#include "vehicle.h"
+
+namespace PathPlanning {
+
+// Max speed in m/s
+const double MAX_SPEED = Mph2ms(49);
+// Min speed in m/s
+const double MIN_SPEED = Mph2ms(15);
+// Max acceleration in m/s^2
+const double MAX_ACC = 10;
+// Min distance to front vehicle, TODO should be parameterized by velocity
+const double SAFE_DISTANCE = VEHICLE_LENGTH * 4;
+
+using LaneTraffic = std::vector<Vehicle>;
+using Traffic = std::vector<LaneTraffic>;
+
+class BehaviourPlanner {
+ private:
+  const TrajectoryGenerator &trajectory_generator;
+  Frenet plan;
+
+ public:
+  BehaviourPlanner(const TrajectoryGenerator &trajectory_generator);
+  ~BehaviourPlanner(){};
+
+  Frenet CurrentPlan();
+  void ResetPlan(const Frenet &state);
+  FTrajectory UpdatePlan(const Vehicle &ego, const Traffic &traffic, size_t trajectory_steps);
+
+ private:
+  std::vector<size_t> AvailableLanes(const Vehicle &vehicle) const;
+  double TrajectoryCost(const Vehicle &ego, const Traffic &traffic, const FTrajectory &trajectory) const;
+  Frenet PredictTarget(const Vehicle &ego, const Traffic &traffic, size_t target_lane, double t) const;
+  bool VehicleAhead(const Vehicle &ego, const Traffic &traffic, Vehicle &vehicle) const;
+};
+
+}  // namespace PathPlanning
+
+#endif

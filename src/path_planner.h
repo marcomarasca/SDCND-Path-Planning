@@ -7,64 +7,46 @@
 
 #include "json.hpp"
 
+#include "behaviour_planner.h"
 #include "map.h"
 #include "trajectory_generator.h"
 #include "vehicle.h"
 
 namespace PathPlanning {
+
 // Id of the ego vehicle
 const int EGO_ID = -1;
+// Ego vehicle range in meters for vehicles detection (in front and behind)
+const double RANGE = 75;
 // Total time in seconds for the trajectory
 const double TRAJECTORY_T = 1.5;
 // Delta t between trajectory points in seconds (same as simulator controller update rate)
 const double TRAJECTORY_STEP_DT = 0.02;
 // Number of points for the trajectory
 const size_t TRAJECTORY_STEPS = TRAJECTORY_T / TRAJECTORY_STEP_DT;
-// Max speed in m/s
-const double MAX_SPEED = Mph2ms(49);
-// Min speed in m/s
-const double MIN_SPEED = Mph2ms(15);
-// Max acceleration in m/s^2
-const double MAX_ACC = 10;
-// Ego vehicle range in meters for vehicles detection (in front and behind)
-const double RANGE = 75;
-// Min distance to front vehicle, TODO should be paremeterized by velocity
-const double SAFE_DISTANCE = VEHICLE_LENGTH * 4;
 
 using json = nlohmann::json;
-using Trajectory = std::pair<std::vector<double>, std::vector<double>>;
-using LaneTraffic = std::vector<Vehicle>;
-using Traffic = std::vector<LaneTraffic>;
 
 class PathPlanner {
- private:
-  static double MaxSpeed(size_t lane_index);
-
  private:
   const Map &map;
   Vehicle ego;
   Traffic traffic;
-  Frenet plan;
-  const TrajectoryGenerator trajectory_generator;
+  TrajectoryGenerator trajectory_generator;
+  BehaviourPlanner behaviour_planner;
 
  public:
   PathPlanner(Map &map, size_t lane_n);
   ~PathPlanner(){};
 
   void Update(const json &telemetry);
-  Trajectory getGlobalCoordTrajectory() const;
+  CTrajectory GetTrajectory() const;
 
  private:
   void UpdateEgo(const json &telemetry);
   void UpdateTraffic(const json &telemetry);
   void UpdatePredictions();
   void UpdatePlan();
-  void UpdateTrajectory();
-
-  double TrajectoryCost(const FTrajectory &trajectory) const;
-  FTrajectory PredictTrajectory(const Vehicle &vehicle, size_t steps) const;
-  Frenet PredictTarget(size_t lane, double t) const;
-  bool VehicleAhead(size_t lane, Vehicle &vehicle) const;
 };
 
 }  // namespace PathPlanning
