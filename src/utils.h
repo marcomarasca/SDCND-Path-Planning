@@ -13,7 +13,7 @@
 
 namespace PathPlanning {
 
-const std::string LOG_BUFER = "  ";
+const std::string LOG_BUFFER = "  ";
 const size_t COST_LOG_BUFFER = 22;
 const size_t COST_LOG_W = 10;
 

@@ -32,9 +32,9 @@ void PathPlanning::PathPlanner::UpdateEgo(const json &telemetry) {
 
   LOG(INFO) << "Updating Vehicle State (Consumed Steps: " << steps_consumed << ", Unvisited Steps: " << steps_to_go
             << "): ";
-  LOG(INFO) << LOG_BUFER << std::setw(col_w) << "Telemetry: " << std::setw(col_w) << "s_p" << std::setw(col_w) << "d_p"
+  LOG(INFO) << LOG_BUFFER << std::setw(col_w) << "Telemetry: " << std::setw(col_w) << "s_p" << std::setw(col_w) << "d_p"
             << std::setw(col_w) << "s_v" << std::setw(col_w) << "d_v";
-  LOG(INFO) << LOG_BUFER << std::setw(col_w) << "Received: " << std::setw(col_w) << state.s.p << std::setw(col_w)
+  LOG(INFO) << LOG_BUFFER << std::setw(col_w) << "Received: " << std::setw(col_w) << state.s.p << std::setw(col_w)
             << state.d.p << std::setw(col_w) << state.s.v << std::setw(col_w) << state.d.v;
 
   this->ego.UpdateState(state);
@@ -48,7 +48,7 @@ void PathPlanning::PathPlanner::UpdateEgo(const json &telemetry) {
     this->ego.ForwardState(steps_consumed - 1);
   }
 
-  LOG(INFO) << LOG_BUFER << std::setw(col_w) << "Using: " << std::setw(col_w) << this->ego.state.s.p << std::setw(col_w)
+  LOG(INFO) << LOG_BUFFER << std::setw(col_w) << "Using: " << std::setw(col_w) << this->ego.state.s.p << std::setw(col_w)
             << this->ego.state.d.p << std::setw(col_w) << this->ego.state.s.v << std::setw(col_w)
             << this->ego.state.d.v;
 }
@@ -100,7 +100,7 @@ void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
   const double s = this->ego.state.s.p;
   size_t lane = 0;
   for (auto &lane_traffic : this->traffic) {
-    LOG(DEBUG) << LOG_BUFER << "Lane " << lane << " Traffic: " << lane_traffic.size();
+    LOG(DEBUG) << LOG_BUFFER << "Lane " << lane << " Traffic: " << lane_traffic.size();
     // Sort the vehicles by distance to the ego vehicle
     std::sort(lane_traffic.begin(), lane_traffic.end(), [&s](const Vehicle &a, const Vehicle &b) {
       return Map::ModDistance(a.state.s.p, s) < Map::ModDistance(b.state.s.p, s);

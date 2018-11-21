@@ -73,7 +73,7 @@ PathPlanning::Frenet PathPlanning::BehaviourPlanner::PredictTarget(const Vehicle
   // Limits the acceleration when going slower
   const double max_acc = start.s.v < MIN_SPEED ? MAX_ACC / 2.0 : MAX_ACC;  // - 0.2 * std::abs(lane_diff);
 
-  LOG(DEBUG) << LOG_BUFER << "Lane Constraints: " << max_speed << " m/s, " << max_acc << " m/s^2";
+  LOG(DEBUG) << LOG_BUFFER << "Lane Constraints: " << max_speed << " m/s, " << max_acc << " m/s^2";
 
   // Velocity: v1 + a * t
   double s_v = std::min(max_speed, start.s.v + max_acc * t);
@@ -90,7 +90,7 @@ PathPlanning::Frenet PathPlanning::BehaviourPlanner::PredictTarget(const Vehicle
     const double distance = Map::ModDistance(ahead.state.s.p, start.s.p);
     const double safe_distance = SafeDistance(ahead.trajectory.back().s.v);
 
-    LOG(DEBUG) << LOG_BUFER << "Vehicle " << ahead.id << " Ahead in " << distance
+    LOG(DEBUG) << LOG_BUFFER << "Vehicle " << ahead.id << " Ahead in " << distance
                << " m (Safe Distance: " << safe_distance << " m)";
 
     // Max s delta at time t according to front vehicle position at t
@@ -98,7 +98,7 @@ PathPlanning::Frenet PathPlanning::BehaviourPlanner::PredictTarget(const Vehicle
     if (max_s_p_delta < s_p_delta) {
       s_v = std::min(s_v, ahead.state.s.v);
 
-      LOG(DEBUG) << LOG_BUFER << "Following Vehicle " << ahead.id << " at Speed: " << s_v << " (Delta: " << s_p_delta
+      LOG(DEBUG) << LOG_BUFFER << "Following Vehicle " << ahead.id << " at Speed: " << s_v << " (Delta: " << s_p_delta
                  << ", Max Delta: " << max_s_p_delta << ")";
 
       s_p_delta = max_s_p_delta < 0 ? s_p_delta : max_s_p_delta;
@@ -124,7 +124,7 @@ PathPlanning::FTrajectory PathPlanning::BehaviourPlanner::GenerateTrajectory(con
   size_t forward_steps =
       std::min(ego.trajectory.size(), static_cast<size_t>(processing_time / this->trajectory_generator.step_dt));
 
-  LOG(DEBUG) << LOG_BUFER << "Forward Steps: " << forward_steps;
+  LOG(DEBUG) << LOG_BUFFER << "Forward Steps: " << forward_steps;
 
   if (forward_steps == 0) {
     return this->trajectory_generator.Generate(ego.state, target, length);
