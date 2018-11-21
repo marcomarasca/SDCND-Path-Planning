@@ -41,6 +41,13 @@ class Vehicle;
 using FTrajectory = std::vector<Frenet>;
 using LaneTraffic = std::vector<Vehicle>;
 using Traffic = std::vector<LaneTraffic>;
+
+struct Plan {
+  Frenet target;
+  FTrajectory trajectory;
+  double t;
+};
+
 using TimePoint = std::chrono::time_point<std::chrono::steady_clock, std::chrono::nanoseconds>;
 using Duration = std::chrono::nanoseconds;
 

@@ -1,7 +1,7 @@
 #ifndef PP_BEHAVIOUR_PLANNER_H
 #define PP_BEHAVIOUR_PLANNER_H
 
-#include "trajectory_evaluator.h"
+#include "plan_evaluator.h"
 #include "trajectory_generator.h"
 #include "utils.h"
 #include "vehicle.h"
@@ -15,12 +15,6 @@ const double MIN_SPEED = Mph2ms(15);
 // Max acceleration in m/s^2
 const double MAX_ACC = 10;
 
-struct Plan {
-  Frenet target;
-  FTrajectory trajectory;
-  double t;
-};
-
 class BehaviourPlanner {
   /**
    * Computes a safe distance at the given velocity (e.g. the breaking distance at the max allowed acceleration)
@@ -29,7 +23,7 @@ class BehaviourPlanner {
 
  private:
   const TrajectoryGenerator &trajectory_generator;
-  const TrajectoryEvaluator trajectory_evaluator;
+  const PlanEvaluator plan_evaluator;
   // Current plan
   Plan plan;
 
@@ -43,10 +37,10 @@ class BehaviourPlanner {
   void ResetPlan(const Frenet &state);
 
   /**
-   * Updates the current plan for the vehicle considering the given traffic and processing time, returns the trajectory
-   * that leads to the best plan (empty if no optimal plan could be computed)
+   * Updates the current plan for the vehicle considering the given traffic and processing time, returns the updated
+   * plan (with an empty trajectory if not plan could be generated)
    */
-  Plan UpdatePlan(const Vehicle &ego, const Traffic &traffic, double t, double processing_time);
+  Plan Update(const Vehicle &ego, const Traffic &traffic, double t, double processing_time);
 
  private:
   /**
@@ -60,14 +54,12 @@ class BehaviourPlanner {
   Frenet PredictTarget(const Vehicle &ego, const Traffic &traffic, size_t target_lane, double t) const;
 
   /**
-   * Generates a new candidate trajectory ending at the given target frenet state for the given vehicle, takes into
-   * account a potential delay from the processing time (in seconds), the final length of trajectory will be of the
-   * given length
+   * Generates a new candidate plan for the given target lane, accounting for the delay given by the processing time
    */
   Plan GeneratePlan(const Vehicle &ego, const Traffic &traffic, double t, double processing_time, size_t target_lane);
 
   /**
-   * Evaluates the given trajectory considering the sorrounding traffic
+   * Evaluates the given plan considering the sorrounding traffic
    */
   double EvaluatePlan(const Plan &plan, const Traffic &traffic) const;
 

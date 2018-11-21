@@ -9,7 +9,7 @@ double PathPlanning::BehaviourPlanner::SafeDistance(double v) {
 }
 
 PathPlanning::BehaviourPlanner::BehaviourPlanner(const TrajectoryGenerator &trajectory_generator)
-    : trajectory_generator(trajectory_generator), trajectory_evaluator(MAX_SPEED) {}
+    : trajectory_generator(trajectory_generator), plan_evaluator(MAX_SPEED) {}
 
 void PathPlanning::BehaviourPlanner::ResetPlan(const Frenet &state) {
   this->plan.target = state;
@@ -17,8 +17,8 @@ void PathPlanning::BehaviourPlanner::ResetPlan(const Frenet &state) {
   this->plan.t = 0.0;
 };
 
-PathPlanning::Plan PathPlanning::BehaviourPlanner::UpdatePlan(const Vehicle &ego, const Traffic &traffic, double t,
-                                                              double processing_time) {
+PathPlanning::Plan PathPlanning::BehaviourPlanner::Update(const Vehicle &ego, const Traffic &traffic, double t,
+                                                          double processing_time) {
   Plan best_plan;
   double min_cost = std::numeric_limits<double>::max();
   const size_t trajectory_length = this->trajectory_generator.TrajectoryLength(t);
@@ -170,5 +170,5 @@ bool PathPlanning::BehaviourPlanner::GetVehicleAhead(const Vehicle &ego, const T
 }
 
 double PathPlanning::BehaviourPlanner::EvaluatePlan(const Plan &plan, const Traffic &traffic) const {
-  return this->trajectory_evaluator.Evaluate(plan.trajectory, plan.t, traffic, this->plan.target);
+  return this->plan_evaluator.Evaluate(plan, this->plan, traffic);
 }

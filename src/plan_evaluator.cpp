@@ -1,10 +1,10 @@
-#include "trajectory_evaluator.h"
+#include "plan_evaluator.h"
 
 #include "logger.h"
 #include "map.h"
 #include "vehicle.h"
 
-PathPlanning::TrajectoryEvaluator::TrajectoryEvaluator(double max_speed)
+PathPlanning::PlanEvaluator::PlanEvaluator(double max_speed)
     : max_speed(max_speed),
       cost_functions({{CostFunctions::CollisionCost, COLLISION_COST_W},
                       {CostFunctions::UnfinishedPlanCost, UNFINISHED_PLAN_COST_W},
@@ -14,8 +14,10 @@ PathPlanning::TrajectoryEvaluator::TrajectoryEvaluator(double max_speed)
                       {CostFunctions::BufferCost, BUFFER_COST_W},
                       {CostFunctions::ChangePlanCost, CHANGE_PLAN_COST_W}}) {}
 
-double PathPlanning::TrajectoryEvaluator::Evaluate(const FTrajectory &trajectory, double t, const Traffic &traffic,
-                                                   const Frenet &current_plan) const {
+double PathPlanning::PlanEvaluator::Evaluate(const Plan &plan, const Plan &previous_plan,
+                                             const Traffic &traffic) const {
+  const auto &trajectory = plan.trajectory;
+
   if (trajectory.empty()) {
     return std::numeric_limits<double>::max();
   }
@@ -34,15 +36,14 @@ double PathPlanning::TrajectoryEvaluator::Evaluate(const FTrajectory &trajectory
   double cost = 0.0;
 
   for (auto &cost_function : this->cost_functions) {
-    cost += cost_function.second *
-            cost_function.first(trajectory, t, current_plan, collision, traffic_data, this->max_speed);
+    cost += cost_function.second * cost_function.first(plan, previous_plan, collision, traffic_data, this->max_speed);
   }
 
   return cost;
 }
 
-PathPlanning::TrafficData PathPlanning::TrajectoryEvaluator::GetTrafficData(const FTrajectory &trajectory,
-                                                                            const Traffic &traffic) const {
+PathPlanning::TrafficData PathPlanning::PlanEvaluator::GetTrafficData(const FTrajectory &trajectory,
+                                                                      const Traffic &traffic) const {
   size_t target_lane = Map::LaneIndex(trajectory.back().d.p);
   size_t lane_traffic = 0;
   double lane_speed = std::numeric_limits<double>::max();
@@ -68,11 +69,11 @@ PathPlanning::TrafficData PathPlanning::TrajectoryEvaluator::GetTrafficData(cons
     }
   }
 
-  return {target_lane, lane_traffic, lane_speed, tot_traffic};
+  return {lane_traffic, lane_speed, tot_traffic};
 }
 
-PathPlanning::Collision PathPlanning::TrajectoryEvaluator::DetectCollision(const FTrajectory &trajectory1,
-                                                                           const FTrajectory &trajectory2) const {
+PathPlanning::Collision PathPlanning::PlanEvaluator::DetectCollision(const FTrajectory &trajectory1,
+                                                                     const FTrajectory &trajectory2) const {
   assert(trajectory1.size() == trajectory2.size());
 
   double closest_distance = std::numeric_limits<double>::max();
@@ -97,8 +98,8 @@ PathPlanning::Collision PathPlanning::TrajectoryEvaluator::DetectCollision(const
   return {collision, closest_distance};
 }
 
-PathPlanning::Collision PathPlanning::TrajectoryEvaluator::DetectCollision(const FTrajectory &trajectory,
-                                                                           const Traffic &traffic) const {
+PathPlanning::Collision PathPlanning::PlanEvaluator::DetectCollision(const FTrajectory &trajectory,
+                                                                     const Traffic &traffic) const {
   // Collision cost
   double min_distance = std::numeric_limits<double>::max();
   bool collision = false;

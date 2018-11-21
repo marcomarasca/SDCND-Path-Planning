@@ -1,5 +1,5 @@
-#ifndef PP_TRAJECTORY_EVALUATOR
-#define PP_TRAJECTORY_EVALUATOR
+#ifndef PP_PLAN_EVALUATOR_H
+#define PP_PLAN_EVALUATOR_H
 
 #include <vector>
 #include "cost_functions.h"
@@ -7,7 +7,11 @@
 
 namespace PathPlanning {
 
-class TrajectoryEvaluator {
+/**
+ * Used to evaluate a given plan generated from the behaviour planner
+ */
+class PlanEvaluator {
+  // Cost weights
   const double COLLISION_COST_W = 10000;
   const double UNFINISHED_PLAN_COST_W = 5000;
   const double SPEED_COST_W = 1000;
@@ -21,14 +25,26 @@ class TrajectoryEvaluator {
   const std::vector<std::pair<CostFunction, double>> cost_functions;
 
  public:
-  TrajectoryEvaluator(double max_speed);
-  ~TrajectoryEvaluator(){};
+  PlanEvaluator(double max_speed);
+  ~PlanEvaluator(){};
 
-  double Evaluate(const FTrajectory &trajectory, double t, const Traffic &traffic, const Frenet &current_plan) const;
+  /**
+   * Evaluates the given plan and returns its cost
+   */
+  double Evaluate(const Plan &plan, const Plan &previous_plan, const Traffic &traffic) const;
 
  private:
+  /**
+   * Generates the traffic data for the target lane of the given trajectory using the given traffic information
+   */
   TrafficData GetTrafficData(const FTrajectory &trajectory, const Traffic &traffic) const;
+  /**
+   * Generates collision data for the given trajectory comparing to the predictions stored in the traffic data
+   */
   Collision DetectCollision(const FTrajectory &trajectory, const Traffic &traffic) const;
+  /**
+   * Generates collision data between the two trajectories
+   */
   Collision DetectCollision(const FTrajectory &trajectory1, const FTrajectory &trajectory2) const;
 };
 

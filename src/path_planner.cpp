@@ -124,7 +124,7 @@ void PathPlanning::PathPlanner::UpdatePredictions() {
 
 void PathPlanning::PathPlanner::UpdatePlan(double processing_time) {
   LOG(INFO) << "Updating Next Plan (Processing Time: " << processing_time << " s)";
-  Plan plan = this->behaviour_planner.UpdatePlan(this->ego, this->traffic, TRAJECTORY_T, processing_time);
+  Plan plan = this->behaviour_planner.Update(this->ego, this->traffic, TRAJECTORY_T, processing_time);
   if (!plan.trajectory.empty()) {
     this->ego.UpdateTrajectory(plan.trajectory);
   }

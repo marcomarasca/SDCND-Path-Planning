@@ -6,7 +6,7 @@
 #include "map.h"
 #include "vehicle.h"
 
-double PathPlanning::CostFunctions::CollisionCost(const FTrajectory &trajectory, double t, const Frenet &current_plan,
+double PathPlanning::CostFunctions::CollisionCost(const Plan &plan, const Plan &previous_plan,
                                                   const Collision &collision, const TrafficData &traffic_data,
                                                   double max_speed) {
   double collision_cost = 0.0;
@@ -21,9 +21,8 @@ double PathPlanning::CostFunctions::CollisionCost(const FTrajectory &trajectory,
   return collision_cost;
 }
 
-double PathPlanning::CostFunctions::BufferCost(const FTrajectory &trajectory, double t, const Frenet &current_plan,
-                                               const Collision &collision, const TrafficData &traffic_data,
-                                               double max_speed) {
+double PathPlanning::CostFunctions::BufferCost(const Plan &plan, const Plan &previous_plan, const Collision &collision,
+                                               const TrafficData &traffic_data, double max_speed) {
   double buffer_cost = Logistic(VEHICLE_LENGTH * 2 / collision.second);
 
   LOG(DEBUG) << LOG_BUFFER << std::left << std::setw(COST_LOG_BUFFER) << "Buffer Cost: " << std::setw(COST_LOG_W)
@@ -32,11 +31,12 @@ double PathPlanning::CostFunctions::BufferCost(const FTrajectory &trajectory, do
   return buffer_cost;
 }
 
-double PathPlanning::CostFunctions::AverageSpeedCost(const FTrajectory &trajectory, double t,
-                                                     const Frenet &current_plan, const Collision &collision,
-                                                     const TrafficData &traffic_data, double max_speed) {
+double PathPlanning::CostFunctions::AverageSpeedCost(const Plan &plan, const Plan &previous_plan,
+                                                     const Collision &collision, const TrafficData &traffic_data,
+                                                     double max_speed) {
+  const auto &trajectory = plan.trajectory;
   // Average speed cost, rewards higher average speed
-  double speed = Map::ModDistance(trajectory.back().s.p, trajectory.front().s.p) / t;
+  double speed = Map::ModDistance(trajectory.back().s.p, trajectory.front().s.p) / plan.t;
   double speed_cost = Logistic((max_speed - speed) / max_speed);
 
   LOG(DEBUG) << LOG_BUFFER << std::left << std::setw(COST_LOG_BUFFER) << "Speed Cost: " << std::setw(COST_LOG_W)
@@ -45,7 +45,7 @@ double PathPlanning::CostFunctions::AverageSpeedCost(const FTrajectory &trajecto
   return speed_cost;
 }
 
-double PathPlanning::CostFunctions::LaneSpeedCost(const FTrajectory &trajectory, double t, const Frenet &current_plan,
+double PathPlanning::CostFunctions::LaneSpeedCost(const Plan &plan, const Plan &previous_plan,
                                                   const Collision &collision, const TrafficData &traffic_data,
                                                   double max_speed) {
   double lane_speed_cost = 0.0;
@@ -60,7 +60,7 @@ double PathPlanning::CostFunctions::LaneSpeedCost(const FTrajectory &trajectory,
   return lane_speed_cost;
 }
 
-double PathPlanning::CostFunctions::LaneTrafficCost(const FTrajectory &trajectory, double t, const Frenet &current_plan,
+double PathPlanning::CostFunctions::LaneTrafficCost(const Plan &plan, const Plan &previous_plan,
                                                     const Collision &collision, const TrafficData &traffic_data,
                                                     double max_speed) {
   // Lane traffic cost
@@ -77,13 +77,15 @@ double PathPlanning::CostFunctions::LaneTrafficCost(const FTrajectory &trajector
   return lane_traffic_cost;
 }
 
-double PathPlanning::CostFunctions::ChangePlanCost(const FTrajectory &trajectory, double t, const Frenet &current_plan,
+double PathPlanning::CostFunctions::ChangePlanCost(const Plan &plan, const Plan &previous_plan,
                                                    const Collision &collision, const TrafficData &traffic_data,
                                                    double max_speed) {
+  const auto &current_target = previous_plan.target;
   // Change plan cost
-  size_t plan_lane = Map::LaneIndex(current_plan.d.p);
+  const size_t current_plan_lane = Map::LaneIndex(current_target.d.p);
+  const size_t target_lane = Map::LaneIndex(plan.target.d.p);
 
-  double change_plan_cost = plan_lane != traffic_data.target_lane ? 1.0 : 0.0;
+  const double change_plan_cost = current_plan_lane != target_lane ? 1.0 : 0.0;
 
   LOG(DEBUG) << LOG_BUFFER << std::left << std::setw(COST_LOG_BUFFER) << "Change Plan Cost: " << std::setw(COST_LOG_W)
              << change_plan_cost;
@@ -91,16 +93,18 @@ double PathPlanning::CostFunctions::ChangePlanCost(const FTrajectory &trajectory
   return change_plan_cost;
 }
 
-double PathPlanning::CostFunctions::UnfinishedPlanCost(const FTrajectory &trajectory, double t,
-                                                       const Frenet &current_plan, const Collision &collision,
-                                                       const TrafficData &traffic_data, double max_speed) {
-  size_t plan_lane = Map::LaneIndex(current_plan.d.p);
-  double d_distance = std::fabs(current_plan.d.p - trajectory.front().d.p);
+double PathPlanning::CostFunctions::UnfinishedPlanCost(const Plan &plan, const Plan &previous_plan,
+                                                       const Collision &collision, const TrafficData &traffic_data,
+                                                       double max_speed) {
+  const auto &trajectory = plan.trajectory;
+  const auto &current_target = previous_plan.target;
+  const size_t current_plan_lane = Map::LaneIndex(current_target.d.p);
+  const size_t target_lane = Map::LaneIndex(plan.target.d.p);
+  const double d_distance = std::fabs(current_target.d.p - trajectory.front().d.p);
 
   double unfinished_plan_cost = 0.0;
 
-  if (traffic_data.target_lane != plan_lane && d_distance > LANE_WIDTH / 4) {
-    double d_distance = std::fabs(current_plan.d.p - trajectory.front().d.p);
+  if (target_lane != current_plan_lane && d_distance > LANE_WIDTH / 4) {
     unfinished_plan_cost = Logistic(d_distance / LANE_WIDTH);
   }
 
