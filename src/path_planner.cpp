@@ -133,3 +133,37 @@ void PathPlanning::PathPlanner::UpdatePlan(double processing_time) {
 PathPlanning::CTrajectory PathPlanning::PathPlanner::GetTrajectory() const {
   return trajectory_generator.FrenetToCartesian(this->ego.trajectory);
 }
+
+void PathPlanning::PathPlanner::DrawRoad() {
+  size_t ego_lane = this->ego.GetLane();
+  double target_s_p = this->ego.trajectory.back().s.p;
+  size_t target_lane = Map::LaneIndex(this->ego.trajectory.back().d.p);
+  for (int i = DRAW_AHEAD; i > -DRAW_BEHIND; i-= VEHICLE_LENGTH) {
+    double ref_s = this->ego.state.s.p + i;
+    size_t lane_n = 0;
+    for (auto &lane_traffic : traffic) {
+      std::cout << "|";
+      bool empty_lane = true;
+      for (auto &vehicle : lane_traffic) {
+        if (vehicle.state.s.p > ref_s - VEHICLE_LENGTH / 2 && vehicle.state.s.p < ref_s + VEHICLE_LENGTH / 2) {
+          empty_lane = false;
+          std::cout << " " << vehicle.id << " ";
+          break;
+        }
+      }
+      if (empty_lane) {
+        if (lane_n == ego_lane && this->ego.state.s.p == ref_s) {
+          std::cout << "^^^";  // Ego vehicle
+          double target_s_p = this->ego.trajectory.back().s.p;
+        } else if (lane_n == target_lane && target_s_p > ref_s - VEHICLE_LENGTH / 2 &&
+                   target_s_p < ref_s + VEHICLE_LENGTH / 2) {
+          std::cout << " X ";  // Trajectory target
+        } else {
+          std::cout << "   ";  // Empty
+        }
+      }
+      ++lane_n;
+    }
+    std::cout << "|" << std::endl;
+  }
+}

@@ -8,6 +8,13 @@ namespace PathPlanning {
 
 enum LogLevel { DEBUG, INFO, WARN, ERROR };
 
+struct LogConfig {
+  bool enabled = true;
+  LogLevel level = WARN;
+};
+
+extern LogConfig LOG_CONFIG;
+
 class LOG {
  public:
   LOG() {}
@@ -23,8 +30,10 @@ class LOG {
   }
   template <class T>
   LOG &operator<<(const T &msg) {
-    std::cout << msg;
-    open = true;
+    if (LOG_CONFIG.enabled && this->level >= LOG_CONFIG.level) {
+      std::cout << msg;
+      open = true;
+    }
     return *this;
   }
 

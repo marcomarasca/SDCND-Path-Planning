@@ -12,6 +12,12 @@
 using json = nlohmann::json;
 using PathPlanning::LOG;
 
+namespace PathPlanning {
+LogConfig LOG_CONFIG;
+}
+
+bool draw_mode = false;
+
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
 // else the empty string "" will be returned.
@@ -41,6 +47,10 @@ void ProcessTelemetry(uWS::WebSocket<uWS::SERVER> &ws, PathPlanning::PathPlanner
   processing_time = std::max(processing_time, PathPlanning::MIN_PROCESSING_TIME);
 
   planner.Update(telemetry, processing_time);
+
+  if (draw_mode) {
+    planner.DrawRoad();
+  }
 
   PathPlanning::Duration update_d = timer.Eval(update_s);
 
@@ -108,6 +118,11 @@ void StartServer(PathPlanning::Map &map) {
   int port = 4567;
   if (h.listen(port)) {
     LOG(PathPlanning::INFO) << "Listening to port " << port;
+
+    // Configure draw mode
+    if (draw_mode) {
+      PathPlanning::LOG_CONFIG.enabled = false;
+    }
   } else {
     LOG(PathPlanning::ERROR) << "Failed to listen to port";
     exit(EXIT_FAILURE);
@@ -122,6 +137,10 @@ int main(int argc, char *argv[]) {
   if (argc > 1) {
     map_file_path = argv[1];
   }
+
+  // Configure logger/ draw mode
+  draw_mode = false;
+  PathPlanning::LOG_CONFIG.level = PathPlanning::LogLevel::DEBUG;
 
   PathPlanning::Map map;
 
