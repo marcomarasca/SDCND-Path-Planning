@@ -8,27 +8,18 @@
 
 namespace PathPlanning {
 
-// Max speed in m/s
-const double MAX_SPEED = Mph2ms(50);
-// Min speed in m/s
-const double MIN_SPEED = Mph2ms(15);
-// Max acceleration in m/s^2
-const double MAX_ACC = 10;
-
 class BehaviourPlanner {
-  /**
-   * Computes a safe distance at the given velocity (e.g. the breaking distance at the max allowed acceleration)
-   */
-  static double SafeDistance(double v);
-
  private:
   const TrajectoryGenerator &trajectory_generator;
   const PlanEvaluator plan_evaluator;
+  const double max_speed;
+  const double min_speed;
+  const double max_acc;
   // Current plan
   Plan plan;
 
  public:
-  BehaviourPlanner(const TrajectoryGenerator &trajectory_generator);
+  BehaviourPlanner(const TrajectoryGenerator &trajectory_generator, double min_speed, double max_speed, double max_acc);
   ~BehaviourPlanner(){};
 
   /**
@@ -56,7 +47,7 @@ class BehaviourPlanner {
   /**
    * Generates a new candidate plan for the given target lane, accounting for the delay given by the processing time
    */
-  Plan GeneratePlan(const Vehicle &ego, const Traffic &traffic, double t, double processing_time, size_t target_lane);
+  Plan GeneratePlan(const Vehicle &ego, const Traffic &traffic, double t, double processing_time, size_t target_lane) const;
 
   /**
    * Evaluates the given plan considering the sorrounding traffic
@@ -68,6 +59,11 @@ class BehaviourPlanner {
    * vehicle in front if found
    */
   bool GetVehicleAhead(const Vehicle &ego, const Traffic &traffic, size_t target_lane, Vehicle &ahead) const;
+
+  /**
+   * Computes a safe distance at the given velocity (e.g. the breaking distance at the max allowed acceleration)
+   */
+  double SafeDistance(double v) const;
 };
 
 }  // namespace PathPlanning

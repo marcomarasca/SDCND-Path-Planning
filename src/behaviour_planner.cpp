@@ -4,12 +4,13 @@
 #include "logger.h"
 #include "map.h"
 
-double PathPlanning::BehaviourPlanner::SafeDistance(double v) {
-  return std::pow(v, 2) / (2 * MAX_ACC) + 2 * VEHICLE_LENGTH;
-}
-
-PathPlanning::BehaviourPlanner::BehaviourPlanner(const TrajectoryGenerator &trajectory_generator)
-    : trajectory_generator(trajectory_generator), plan_evaluator(MAX_SPEED) {}
+PathPlanning::BehaviourPlanner::BehaviourPlanner(const TrajectoryGenerator &trajectory_generator, double max_speed,
+                                                 double min_speed, double max_acc)
+    : trajectory_generator(trajectory_generator),
+      max_speed(max_speed),
+      min_speed(min_speed),
+      max_acc(max_acc),
+      plan_evaluator(max_speed) {}
 
 void PathPlanning::BehaviourPlanner::ResetPlan(const Frenet &state) {
   this->plan.target = state;
@@ -68,10 +69,10 @@ PathPlanning::Frenet PathPlanning::BehaviourPlanner::PredictTarget(const Vehicle
   auto &start = ego.state;
   size_t start_lane = Map::LaneIndex(start.d.p);
 
-  int lane_diff = static_cast<int>(target_lane) - static_cast<int>(start_lane);
-  const double max_speed = MAX_SPEED - 1 * std::abs(lane_diff);
+  const int lane_delta = static_cast<int>(target_lane) - static_cast<int>(start_lane);
+  const double max_speed = this->max_speed;  // - 1 * (target_lane + 1); //std::abs(lane_delta);
   // Limits the acceleration when going slower
-  const double max_acc = start.s.v < MIN_SPEED ? MAX_ACC / 2.0 : MAX_ACC;  // - 0.2 * std::abs(lane_diff);
+  const double max_acc = start.s.v < this->min_speed ? this->max_acc / 2.0 : this->max_acc;
 
   LOG(DEBUG) << LOG_BUFFER << "Lane Constraints: " << max_speed << " m/s, " << max_acc << " m/s^2";
 
@@ -88,7 +89,7 @@ PathPlanning::Frenet PathPlanning::BehaviourPlanner::PredictTarget(const Vehicle
   Vehicle ahead(-1);
   if (this->GetVehicleAhead(ego, traffic, target_lane, ahead)) {
     const double distance = Map::ModDistance(ahead.state.s.p, start.s.p);
-    const double safe_distance = SafeDistance(ahead.trajectory.back().s.v);
+    const double safe_distance = this->SafeDistance(ahead.trajectory.back().s.v);
 
     LOG(DEBUG) << LOG_BUFFER << "Vehicle " << ahead.id << " Ahead in " << distance
                << " m (Safe Distance: " << safe_distance << " m)";
@@ -97,12 +98,11 @@ PathPlanning::Frenet PathPlanning::BehaviourPlanner::PredictTarget(const Vehicle
     const double max_s_p_delta = Map::ModDistance(ahead.trajectory.back().s.p - safe_distance, start.s.p);
     if (max_s_p_delta < s_p_delta) {
       s_v = std::min(s_v, ahead.state.s.v);
+      s_p_delta = max_s_p_delta < 0 ? s_p_delta : max_s_p_delta;
+      s_a = 0.0;
 
       LOG(DEBUG) << LOG_BUFFER << "Following Vehicle " << ahead.id << " at Speed: " << s_v << " (Delta: " << s_p_delta
                  << ", Max Delta: " << max_s_p_delta << ")";
-
-      s_p_delta = max_s_p_delta < 0 ? s_p_delta : max_s_p_delta;
-      s_a = 0.0;
     }
   }
 
@@ -110,7 +110,7 @@ PathPlanning::Frenet PathPlanning::BehaviourPlanner::PredictTarget(const Vehicle
   double d_p = Map::LaneDisplacement(target_lane);
   // Limits the amount of displacement to reduce jerking
   if (std::fabs(d_p - start.d.p) >= LANE_WIDTH) {
-    d_p = start.d.p + lane_diff * LANE_WIDTH;
+    d_p = start.d.p + lane_delta * LANE_WIDTH;
   }
   const double d_v = 0.0;
   const double d_a = 0.0;
@@ -119,7 +119,7 @@ PathPlanning::Frenet PathPlanning::BehaviourPlanner::PredictTarget(const Vehicle
 }
 
 PathPlanning::Plan PathPlanning::BehaviourPlanner::GeneratePlan(const Vehicle &ego, const Traffic &traffic, double t,
-                                                                double processing_time, size_t target_lane) {
+                                                                double processing_time, size_t target_lane) const {
   // Generates a trajectory considering the delay given by the processing time
   size_t forward_steps = std::min(ego.trajectory.size(), this->trajectory_generator.TrajectoryLength(processing_time));
 

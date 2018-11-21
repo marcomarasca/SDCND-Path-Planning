@@ -8,7 +8,7 @@ PathPlanning::PathPlanner::PathPlanner(Map &map, size_t lane_n)
       ego(EGO_ID),
       traffic(lane_n),
       trajectory_generator(map, TRAJECTORY_STEP_DT, MAX_SPEED, MAX_ACC),
-      behaviour_planner(this->trajectory_generator) {}
+      behaviour_planner(this->trajectory_generator, MAX_SPEED, MIN_SPEED, MAX_ACC) {}
 
 void PathPlanning::PathPlanner::Update(const json &telemetry, double processing_time) {
   LOG(INFO) << "<------ Updating Path Planner (Processing time: " << processing_time << " s) ------>";
