@@ -18,14 +18,13 @@ class TrajectoryEvaluator {
 
  private:
   const double max_speed;
-  const double step_dt;
   const std::vector<std::pair<CostFunction, double>> cost_functions;
 
  public:
-  TrajectoryEvaluator(double max_speed, double step_dt);
+  TrajectoryEvaluator(double max_speed);
   ~TrajectoryEvaluator(){};
 
-  double Evaluate(const FTrajectory &trajectory, const Traffic &traffic, const Frenet &current_plan) const;
+  double Evaluate(const FTrajectory &trajectory, double t, const Traffic &traffic, const Frenet &current_plan) const;
 
  private:
   TrafficData GetTrafficData(const FTrajectory &trajectory, const Traffic &traffic) const;

@@ -22,16 +22,19 @@ class TrajectoryGenerator {
  public:
   // The delta between time steps of generated trajectories
   const double step_dt;
+  const double max_speed;
+  const double max_acc;
 
-  TrajectoryGenerator(const Map &map, double step_dt);
+  TrajectoryGenerator(const Map &map, double step_dt, double max_speed, double max_acc);
   ~TrajectoryGenerator(){};
 
-  FTrajectory Generate(const Frenet &start, const Frenet &target, size_t steps) const;
-  FTrajectory Predict(const Frenet &start, const StatePredictionFunction &predict, size_t steps) const;
+  FTrajectory Generate(const Frenet &start, const Frenet &target, size_t length) const;
+  FTrajectory Predict(const Frenet &start, const StatePredictionFunction &predict, size_t length) const;
   CTrajectory FrenetToCartesian(const FTrajectory &trajectory) const;
+  size_t TrajectoryLength(double t) const;
 
  private:
-  Coeff MinimizeJerk(const State &start, const State &target, double T) const;
+  Coeff MinimizeJerk(const State &start, const State &target, double t) const;
   Coeff Differentiate(const Coeff &coefficients) const;
   double Eval(double x, const Coeff &coefficients) const;
 };

@@ -9,25 +9,24 @@ double PathPlanning::BehaviourPlanner::SafeDistance(double v) {
 }
 
 PathPlanning::BehaviourPlanner::BehaviourPlanner(const TrajectoryGenerator &trajectory_generator)
-    : trajectory_generator(trajectory_generator), trajectory_evaluator(MAX_SPEED, trajectory_generator.step_dt) {}
+    : trajectory_generator(trajectory_generator), trajectory_evaluator(MAX_SPEED) {}
 
 void PathPlanning::BehaviourPlanner::ResetPlan(const Frenet &state) { this->plan = state; };
 
 PathPlanning::FTrajectory PathPlanning::BehaviourPlanner::UpdatePlan(const Vehicle &ego, const Traffic &traffic,
-                                                                     size_t trajectory_steps, double processing_time) {
-  const double t = trajectory_steps * this->trajectory_generator.step_dt;
-
+                                                                     double t, double processing_time) {
   Frenet best_target;
   FTrajectory best_trajectory;
   double min_cost = std::numeric_limits<double>::max();
+  const size_t trajectory_length = this->trajectory_generator.TrajectoryLength(t);
 
   for (size_t target_lane : this->GetAvailableLanes(ego)) {
     LOG(DEBUG) << "Evaluating Lane: " << target_lane;
 
     // Generate a candidate trajectory
     Frenet target = this->PredictTarget(ego, traffic, target_lane, t);
-    FTrajectory trajectory = this->GenerateTrajectory(ego, target, trajectory_steps, processing_time);
-    const double trajectory_cost = this->EvaluateTrajectory(trajectory, traffic);
+    FTrajectory trajectory = this->GenerateTrajectory(ego, target, trajectory_length, processing_time);
+    const double trajectory_cost = this->EvaluateTrajectory(trajectory, t, traffic);
 
     LOG(DEBUG) << "Cost for Lane " << target_lane << ": " << trajectory_cost;
 
@@ -72,7 +71,7 @@ PathPlanning::Frenet PathPlanning::BehaviourPlanner::PredictTarget(const Vehicle
   int lane_diff = static_cast<int>(target_lane) - static_cast<int>(start_lane);
   const double max_speed = MAX_SPEED - 1 * std::abs(lane_diff);
   // Limits the acceleration when going slower
-  const double max_acc = start.s.v < MIN_SPEED ? MAX_ACC / 2.0 : MAX_ACC - 0.2 * std::abs(lane_diff);
+  const double max_acc = start.s.v < MIN_SPEED ? MAX_ACC / 2.0 : MAX_ACC;  // - 0.2 * std::abs(lane_diff);
 
   LOG(DEBUG) << LOG_BUFER << "Lane Constraints: " << max_speed << " m/s, " << max_acc << " m/s^2";
 
@@ -120,8 +119,7 @@ PathPlanning::Frenet PathPlanning::BehaviourPlanner::PredictTarget(const Vehicle
 }
 
 PathPlanning::FTrajectory PathPlanning::BehaviourPlanner::GenerateTrajectory(const Vehicle &ego, const Frenet &target,
-                                                                             size_t trajectory_steps,
-                                                                             double processing_time) {
+                                                                             size_t length, double processing_time) {
   // Generates a trajectory considering the delay given by the processing time
   size_t forward_steps =
       std::min(ego.trajectory.size(), static_cast<size_t>(processing_time / this->trajectory_generator.step_dt));
@@ -129,13 +127,13 @@ PathPlanning::FTrajectory PathPlanning::BehaviourPlanner::GenerateTrajectory(con
   LOG(DEBUG) << LOG_BUFER << "Forward Steps: " << forward_steps;
 
   if (forward_steps == 0) {
-    return this->trajectory_generator.Generate(ego.state, target, trajectory_steps);
+    return this->trajectory_generator.Generate(ego.state, target, length);
   }
 
   Frenet start = ego.StateAt(forward_steps - 1);
   FTrajectory trajectory{ego.trajectory.begin(), ego.trajectory.begin() + forward_steps};
-  FTrajectory trajectory_tail = this->trajectory_generator.Generate(start, target, trajectory_steps - forward_steps);
-  trajectory.reserve(trajectory_steps);
+  FTrajectory trajectory_tail = this->trajectory_generator.Generate(start, target, length - forward_steps);
+  trajectory.reserve(length);
   trajectory.insert(trajectory.end(), trajectory_tail.begin(), trajectory_tail.end());
 
   return trajectory;
@@ -156,6 +154,7 @@ bool PathPlanning::BehaviourPlanner::GetVehicleAhead(const Vehicle &ego, const T
   return found;
 }
 
-double PathPlanning::BehaviourPlanner::EvaluateTrajectory(const FTrajectory &trajectory, const Traffic &traffic) const {
-  return this->trajectory_evaluator.Evaluate(trajectory, traffic, this->plan);
+double PathPlanning::BehaviourPlanner::EvaluateTrajectory(const FTrajectory &trajectory, double t,
+                                                          const Traffic &traffic) const {
+  return this->trajectory_evaluator.Evaluate(trajectory, t, traffic, this->plan);
 }

@@ -9,7 +9,7 @@
 namespace PathPlanning {
 
 // Max speed in m/s
-const double MAX_SPEED = Mph2ms(49);
+const double MAX_SPEED = Mph2ms(47);
 // Min speed in m/s
 const double MIN_SPEED = Mph2ms(15);
 // Max acceleration in m/s^2
@@ -40,7 +40,7 @@ class BehaviourPlanner {
    * Updates the current plan for the vehicle considering the given traffic and processing time, returns the trajectory
    * that leads to the best plan (empty if no optimal plan could be computed)
    */
-  FTrajectory UpdatePlan(const Vehicle &ego, const Traffic &traffic, size_t trajectory_steps, double processing_time);
+  FTrajectory UpdatePlan(const Vehicle &ego, const Traffic &traffic, double t, double processing_time);
 
  private:
   /**
@@ -55,16 +55,15 @@ class BehaviourPlanner {
 
   /**
    * Generates a new candidate trajectory ending at the given target frenet state for the given vehicle, takes into
-   * account a potential delay from the processing time (in seconds), the final length of trajectory will be trajectory
-   * steps
+   * account a potential delay from the processing time (in seconds), the final length of trajectory will be of the
+   * given length
    */
-  FTrajectory GenerateTrajectory(const Vehicle &ego, const Frenet &target, size_t trajectory_steps,
-                                 double processing_time);
+  FTrajectory GenerateTrajectory(const Vehicle &ego, const Frenet &target, size_t length, double processing_time);
 
   /**
    * Evaluates the given trajectory considering the sorrounding traffic
    */
-  double EvaluateTrajectory(const FTrajectory &trajectory, const Traffic &traffic) const;
+  double EvaluateTrajectory(const FTrajectory &trajectory, double t, const Traffic &traffic) const;
 
   /**
    * Returns true if a vehicle is ahead of the given ego vehicle in the given lane, populates the ahead vehicle with the

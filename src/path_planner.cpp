@@ -7,7 +7,7 @@ PathPlanning::PathPlanner::PathPlanner(Map &map, size_t lane_n)
     : map(map),
       ego(EGO_ID),
       traffic(lane_n),
-      trajectory_generator(map, TRAJECTORY_STEP_DT),
+      trajectory_generator(map, TRAJECTORY_STEP_DT, MAX_SPEED, MAX_ACC),
       behaviour_planner(this->trajectory_generator) {}
 
 void PathPlanning::PathPlanner::Update(const json &telemetry, double processing_time) {
@@ -111,10 +111,11 @@ void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
 
 void PathPlanning::PathPlanner::UpdatePredictions() {
   LOG(INFO) << "Updating Traffic Predictions";
+  const size_t trajectory_length = this->trajectory_generator.TrajectoryLength(TRAJECTORY_T);
   for (auto &lane_traffic : this->traffic) {
     for (auto &vehicle : lane_traffic) {
-      FTrajectory trajectory = this->trajectory_generator.Predict(
-          vehicle.state, [&vehicle](double t) { return vehicle.PredictStateAt(t); }, TRAJECTORY_STEPS);
+      auto predict_state_fn = [&vehicle](double t) { return vehicle.PredictStateAt(t); };
+      FTrajectory trajectory = this->trajectory_generator.Predict(vehicle.state, predict_state_fn, trajectory_length);
       vehicle.UpdateTrajectory(trajectory);
     }
   }
@@ -123,7 +124,7 @@ void PathPlanning::PathPlanner::UpdatePredictions() {
 void PathPlanning::PathPlanner::UpdatePlan(double processing_time) {
   LOG(INFO) << "Updating Next Plan (Processing Time: " << processing_time << " s)";
   FTrajectory next_trajectory =
-      this->behaviour_planner.UpdatePlan(this->ego, this->traffic, TRAJECTORY_STEPS, processing_time);
+      this->behaviour_planner.UpdatePlan(this->ego, this->traffic, TRAJECTORY_T, processing_time);
   if (!next_trajectory.empty()) {
     this->ego.UpdateTrajectory(next_trajectory);
   }

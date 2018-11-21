@@ -4,9 +4,8 @@
 #include "map.h"
 #include "vehicle.h"
 
-PathPlanning::TrajectoryEvaluator::TrajectoryEvaluator(double max_speed, double step_dt)
+PathPlanning::TrajectoryEvaluator::TrajectoryEvaluator(double max_speed)
     : max_speed(max_speed),
-      step_dt(step_dt),
       cost_functions({{CostFunctions::CollisionCost, COLLISION_COST_W},
                       {CostFunctions::UnfinishedPlanCost, UNFINISHED_PLAN_COST_W},
                       {CostFunctions::AverageSpeedCost, SPEED_COST_W},
@@ -15,7 +14,7 @@ PathPlanning::TrajectoryEvaluator::TrajectoryEvaluator(double max_speed, double 
                       {CostFunctions::BufferCost, BUFFER_COST_W},
                       {CostFunctions::ChangePlanCost, CHANGE_PLAN_COST_W}}) {}
 
-double PathPlanning::TrajectoryEvaluator::Evaluate(const FTrajectory &trajectory, const Traffic &traffic,
+double PathPlanning::TrajectoryEvaluator::Evaluate(const FTrajectory &trajectory, double t, const Traffic &traffic,
                                                    const Frenet &current_plan) const {
   if (trajectory.empty()) {
     return std::numeric_limits<double>::max();
@@ -36,7 +35,7 @@ double PathPlanning::TrajectoryEvaluator::Evaluate(const FTrajectory &trajectory
 
   for (auto &cost_function : this->cost_functions) {
     cost += cost_function.second *
-            cost_function.first(trajectory, current_plan, collision, traffic_data, this->max_speed, this->step_dt);
+            cost_function.first(trajectory, t, current_plan, collision, traffic_data, this->max_speed);
   }
 
   return cost;
@@ -89,8 +88,8 @@ PathPlanning::Collision PathPlanning::TrajectoryEvaluator::DetectCollision(const
       closest_distance = distance_at_t;
     }
     if (s_distance < VEHICLE_LENGTH * 2 && Map::LaneIndex(step.d.p) == Map::LaneIndex(other_step.d.p)) {
-      LOG(DEBUG) << LOG_BUFER << "Collision Detected: " << step.s.p << ", " << step.d.p << " - " << other_step.s.p
-                 << ", " << other_step.d.p;
+      LOG(DEBUG) << LOG_BUFER << "Collision Detected on Trajectory: " << step.s.p << ", " << step.d.p << " - "
+                 << other_step.s.p << ", " << other_step.d.p;
       collision = true;
       break;
     }
@@ -116,6 +115,8 @@ PathPlanning::Collision PathPlanning::TrajectoryEvaluator::DetectCollision(const
       }
 
       if (distance.first) {
+        LOG(DEBUG) << LOG_BUFER << "Collision with Vehicle " << vehicle.id << ": " << trajectory.front().s.p << ", "
+                   << trajectory.front().d.p << " - " << vehicle.state.s.p << ", " << vehicle.state.d.p;
         collision = true;
         break;
       }

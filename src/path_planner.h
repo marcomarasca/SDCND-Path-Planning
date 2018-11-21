@@ -22,8 +22,6 @@ const double RANGE = 80;
 const double TRAJECTORY_T = 2.0;
 // Delta t between trajectory points in seconds (same as simulator controller update rate)
 const double TRAJECTORY_STEP_DT = 0.02;
-// Number of points for the trajectory
-const size_t TRAJECTORY_STEPS = TRAJECTORY_T / TRAJECTORY_STEP_DT;
 // Min number of second for the processing time to consider when including points from the past trajectory
 const double MIN_PROCESSING_TIME = 5 * TRAJECTORY_STEP_DT;
 

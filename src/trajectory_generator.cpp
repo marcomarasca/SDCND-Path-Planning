@@ -5,30 +5,33 @@
 using Eigen::Matrix3d;
 using Eigen::Vector3d;
 
-PathPlanning::TrajectoryGenerator::TrajectoryGenerator(const Map &map, double step_dt) : map(map), step_dt(step_dt) {}
+PathPlanning::TrajectoryGenerator::TrajectoryGenerator(const Map &map, double step_dt, double max_speed, double max_acc)
+    : map(map), step_dt(step_dt), max_speed(max_speed), max_acc(max_acc) {}
 
 PathPlanning::FTrajectory PathPlanning::TrajectoryGenerator::Generate(const Frenet &start, const Frenet &target,
-                                                                      size_t steps) const {
-  const double T = steps * step_dt;
-
+                                                                      size_t length) const {
+  const double t = length * this->step_dt;
   // Computes the trajectory coefficients
-  const Coeff s_p_coeff = this->MinimizeJerk(start.s, target.s, T);
+  const Coeff s_p_coeff = this->MinimizeJerk(start.s, target.s, t);
   const Coeff s_v_coeff = this->Differentiate(s_p_coeff);
   const Coeff s_a_coeff = this->Differentiate(s_v_coeff);
 
-  const Coeff d_p_coeff = this->MinimizeJerk(start.d, target.d, T);
+  const Coeff d_p_coeff = this->MinimizeJerk(start.d, target.d, t);
   const Coeff d_v_coeff = this->Differentiate(d_p_coeff);
   const Coeff d_a_coeff = this->Differentiate(d_v_coeff);
 
   PathPlanning::FTrajectory trajectory;
-  trajectory.reserve(steps);
+  trajectory.reserve(length);
+  Frenet prev_state = start;
+  // Maximum delta when moving s
+  static const double max_s_delta = this->max_speed * this->step_dt + 0.5 * this->max_acc * std::pow(this->step_dt, 2);
   // Computes the values for each step of the trajectory
-  for (size_t i = 1; i <= steps; ++i) {
-    const double t = i * step_dt;
+  for (size_t i = 1; i <= length; ++i) {
+    const double t = i * this->step_dt;
 
-    const double s_p = this->Eval(t, s_p_coeff);
-    const double s_v = this->Eval(t, s_v_coeff);
-    const double s_a = this->Eval(t, s_a_coeff);
+    const double s_p = this->Eval(t, s_p_coeff); //std::min(this->Eval(t, s_p_coeff), prev_state.s.p + max_s_delta);
+    const double s_v = this->Eval(t, s_v_coeff); //std::min(this->Eval(t, s_v_coeff), max_speed);
+    const double s_a = this->Eval(t, s_a_coeff); //std::min(this->Eval(t, s_a_coeff), max_acc);
 
     const double d_p = this->Eval(t, d_p_coeff);
     const double d_v = this->Eval(t, d_v_coeff);
@@ -38,6 +41,7 @@ PathPlanning::FTrajectory PathPlanning::TrajectoryGenerator::Generate(const Fren
     const State d{d_p, d_v, d_a};
 
     trajectory.emplace_back(s, d);
+    prev_state = {s, d};
   }
 
   return trajectory;
@@ -45,10 +49,10 @@ PathPlanning::FTrajectory PathPlanning::TrajectoryGenerator::Generate(const Fren
 
 PathPlanning::FTrajectory PathPlanning::TrajectoryGenerator::Predict(const Frenet &start,
                                                                      const StatePredictionFunction &prediction,
-                                                                     size_t steps) const {
+                                                                     size_t length) const {
   FTrajectory trajectory;
-  trajectory.reserve(steps);
-  for (size_t i = 1; i <= steps; ++i) {
+  trajectory.reserve(length);
+  for (size_t i = 1; i <= length; ++i) {
     const double t = i * step_dt;
     trajectory.emplace_back(prediction(t));
   }
@@ -68,6 +72,10 @@ PathPlanning::CTrajectory PathPlanning::TrajectoryGenerator::FrenetToCartesian(c
   return CTrajectory({next_x_vals, next_y_vals});
 }
 
+size_t PathPlanning::TrajectoryGenerator::TrajectoryLength(double t) const {
+  return t / this->step_dt;
+}
+
 PathPlanning::Coeff PathPlanning::TrajectoryGenerator::Differentiate(const Coeff &coefficients) const {
   Coeff result(coefficients.size() - 1);
   for (size_t i = 1; i < coefficients.size(); ++i) {
@@ -84,21 +92,21 @@ double PathPlanning::TrajectoryGenerator::Eval(double x, const Coeff &coefficien
   return y;
 }
 
-PathPlanning::Coeff PathPlanning::TrajectoryGenerator::MinimizeJerk(const State &start,
-                                                           const State &target, double T) const {
-  const double T_2 = T * T;
-  const double T_3 = T * T_2;
-  const double T_4 = T * T_3;
-  const double T_5 = T * T_4;
+PathPlanning::Coeff PathPlanning::TrajectoryGenerator::MinimizeJerk(const State &start, const State &target,
+                                                                    double t) const {
+  const double t_2 = t * t;
+  const double t_3 = t * t_2;
+  const double t_4 = t * t_3;
+  const double t_5 = t * t_4;
 
   Matrix3d t_matrix;
-  t_matrix <<     T_3,      T_4,      T_5, 
-              3 * T_2,  4 * T_3,  5 * T_4,
-                6 * T, 12 * T_2, 20 * T_3;
+  t_matrix <<     t_3,      t_4,      t_5, 
+              3 * t_2,  4 * t_3,  5 * t_4,
+                6 * t, 12 * t_2, 20 * t_3;
 
   Vector3d s_vector;
-  s_vector << target.p - (start.p + start.v * T + 0.5 * start.a * T_2), 
-              target.v - (start.v + start.a * T),
+  s_vector << target.p - (start.p + start.v * t + 0.5 * start.a * t_2), 
+              target.v - (start.v + start.a * t),
               target.a - start.a;
 
   Vector3d a_vector = t_matrix.inverse() * s_vector;
