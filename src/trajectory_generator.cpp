@@ -29,9 +29,9 @@ PathPlanning::FTrajectory PathPlanning::TrajectoryGenerator::Generate(const Fren
   for (size_t i = 1; i <= length; ++i) {
     const double t = i * this->step_dt;
 
-    const double s_p = this->Eval(t, s_p_coeff); //std::min(this->Eval(t, s_p_coeff), prev_state.s.p + max_s_delta);
-    const double s_v = this->Eval(t, s_v_coeff); //std::min(this->Eval(t, s_v_coeff), max_speed);
-    const double s_a = this->Eval(t, s_a_coeff); //std::min(this->Eval(t, s_a_coeff), max_acc);
+    const double s_p = std::min(this->Eval(t, s_p_coeff), prev_state.s.p + max_s_delta);
+    const double s_v = std::min(this->Eval(t, s_v_coeff), max_speed);
+    const double s_a = std::min(this->Eval(t, s_a_coeff), max_acc);
 
     const double d_p = this->Eval(t, d_p_coeff);
     const double d_v = this->Eval(t, d_v_coeff);
