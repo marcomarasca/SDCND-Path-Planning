@@ -25,7 +25,7 @@ const double TRAJECTORY_STEP_DT = 0.02;
 // Min number of second for the processing time to consider when including points from the past trajectory
 const double MIN_PROCESSING_TIME = 5 * TRAJECTORY_STEP_DT;
 // Max speed in m/s
-const double MAX_SPEED = Mph2ms(47);
+const double MAX_SPEED = Mph2ms(48);
 // Min speed in m/s
 const double MIN_SPEED = Mph2ms(15);
 // Max acceleration in m/s^2

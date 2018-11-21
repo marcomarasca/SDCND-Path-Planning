@@ -12,13 +12,13 @@ namespace PathPlanning {
  */
 class PlanEvaluator {
   // Cost weights
-  const double COLLISION_COST_W = 10000;
-  const double UNFINISHED_PLAN_COST_W = 5000;
+  const double COLLISION_COST_W = 50000;
+  const double UNFINISHED_PLAN_COST_W = 10000;
   const double SPEED_COST_W = 1000;
   const double LANE_TRAFFIC_COST_W = 250;
   const double LANE_SPEED_COST_W = 200;
   const double BUFFER_COST_W = 50;
-  const double CHANGE_PLAN_COST_W = 10;
+  const double CHANGE_PLAN_COST_W = 20;
 
  private:
   const double max_speed;

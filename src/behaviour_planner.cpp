@@ -70,7 +70,8 @@ PathPlanning::Frenet PathPlanning::BehaviourPlanner::PredictTarget(const Vehicle
   size_t start_lane = Map::LaneIndex(start.d.p);
 
   const int lane_delta = static_cast<int>(target_lane) - static_cast<int>(start_lane);
-  const double max_speed = this->max_speed;  // - 1 * (target_lane + 1); //std::abs(lane_delta);
+  // Limits max speed when changing lanes + slightly reduce speed for outer lane (e.g. right lane is slower traffic)
+  const double max_speed = this->max_speed - std::abs(lane_delta) - 0.2 * target_lane;
   // Limits the acceleration when going slower
   const double max_acc = start.s.v < this->min_speed ? this->max_acc / 2.0 : this->max_acc;
 
@@ -98,8 +99,13 @@ PathPlanning::Frenet PathPlanning::BehaviourPlanner::PredictTarget(const Vehicle
     const double max_s_p_delta = Map::ModDistance(ahead.trajectory.back().s.p - safe_distance, start.s.p);
     if (max_s_p_delta < s_p_delta) {
       s_v = std::min(s_v, ahead.state.s.v);
-      s_p_delta = max_s_p_delta < 0 ? s_p_delta : max_s_p_delta;
+      s_p_delta = max_s_p_delta;
       s_a = 0.0;
+
+      if (s_p_delta < 0) {
+        LOG(WARN) << "Collision Risk";
+        s_p_delta = safe_distance;
+      }
 
       LOG(DEBUG) << LOG_BUFFER << "Following Vehicle " << ahead.id << " at Speed: " << s_v << " (Delta: " << s_p_delta
                  << ", Max Delta: " << max_s_p_delta << ")";
@@ -167,6 +173,10 @@ bool PathPlanning::BehaviourPlanner::GetVehicleAhead(const Vehicle &ego, const T
     }
   }
   return found;
+}
+
+double PathPlanning::BehaviourPlanner::SafeDistance(double v) const {
+  return std::pow(v, 2) / (2 * this->max_acc) + 2 * VEHICLE_LENGTH;
 }
 
 double PathPlanning::BehaviourPlanner::EvaluatePlan(const Plan &plan, const Traffic &traffic) const {

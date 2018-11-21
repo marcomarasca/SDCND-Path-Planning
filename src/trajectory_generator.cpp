@@ -1,7 +1,6 @@
 #include "trajectory_generator.h"
 #include "Eigen/Dense"
 #include "utils.h"
-#include <iostream>
 
 using Eigen::Matrix3d;
 using Eigen::Vector3d;
@@ -24,6 +23,7 @@ PathPlanning::FTrajectory PathPlanning::TrajectoryGenerator::Generate(const Fren
   PathPlanning::FTrajectory trajectory;
   trajectory.reserve(length);
   Frenet prev_state = start;
+
   // Maximum delta when moving s
   static const double max_s_delta = this->max_speed * this->step_dt + 0.5 * this->max_acc * std::pow(this->step_dt, 2);
   // Computes the values for each step of the trajectory
@@ -32,7 +32,7 @@ PathPlanning::FTrajectory PathPlanning::TrajectoryGenerator::Generate(const Fren
 
     const double s_p = std::min(this->Eval(t, s_p_coeff), prev_state.s.p + max_s_delta);
     const double s_v = std::min(this->Eval(t, s_v_coeff), max_speed);
-    const double s_a = std::min(this->Eval(t, s_a_coeff), max_acc);
+    const double s_a = std::max(std::min(this->Eval(t, s_a_coeff), max_acc), -max_acc);
 
     const double d_p = this->Eval(t, d_p_coeff);
     const double d_v = this->Eval(t, d_v_coeff);
@@ -73,9 +73,7 @@ PathPlanning::CTrajectory PathPlanning::TrajectoryGenerator::FrenetToCartesian(c
   return CTrajectory({next_x_vals, next_y_vals});
 }
 
-size_t PathPlanning::TrajectoryGenerator::TrajectoryLength(double t) const {
-  return t / this->step_dt;
-}
+size_t PathPlanning::TrajectoryGenerator::TrajectoryLength(double t) const { return t / this->step_dt; }
 
 PathPlanning::Coeff PathPlanning::TrajectoryGenerator::Differentiate(const Coeff &coefficients) const {
   Coeff result(coefficients.size() - 1);
