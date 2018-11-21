@@ -12,6 +12,7 @@ PathPlanning::PathPlanner::PathPlanner(Map &map, size_t lane_n)
 
 void PathPlanning::PathPlanner::Update(const json &telemetry, double processing_time) {
   LOG(INFO) << "<------ Updating Path Planner (Processing time: " << processing_time << " s) ------>";
+
   this->UpdateEgo(telemetry);
   this->UpdateTraffic(telemetry);
   this->UpdatePredictions();
@@ -48,8 +49,8 @@ void PathPlanning::PathPlanner::UpdateEgo(const json &telemetry) {
     this->ego.ForwardState(steps_consumed - 1);
   }
 
-  LOG(INFO) << LOG_BUFFER << std::setw(col_w) << "Using: " << std::setw(col_w) << this->ego.state.s.p << std::setw(col_w)
-            << this->ego.state.d.p << std::setw(col_w) << this->ego.state.s.v << std::setw(col_w)
+  LOG(INFO) << LOG_BUFFER << std::setw(col_w) << "Using: " << std::setw(col_w) << this->ego.state.s.p
+            << std::setw(col_w) << this->ego.state.d.p << std::setw(col_w) << this->ego.state.s.v << std::setw(col_w)
             << this->ego.state.d.v;
 }
 
@@ -123,10 +124,9 @@ void PathPlanning::PathPlanner::UpdatePredictions() {
 
 void PathPlanning::PathPlanner::UpdatePlan(double processing_time) {
   LOG(INFO) << "Updating Next Plan (Processing Time: " << processing_time << " s)";
-  FTrajectory next_trajectory =
-      this->behaviour_planner.UpdatePlan(this->ego, this->traffic, TRAJECTORY_T, processing_time);
-  if (!next_trajectory.empty()) {
-    this->ego.UpdateTrajectory(next_trajectory);
+  Plan plan = this->behaviour_planner.UpdatePlan(this->ego, this->traffic, TRAJECTORY_T, processing_time);
+  if (!plan.trajectory.empty()) {
+    this->ego.UpdateTrajectory(plan.trajectory);
   }
 }
 

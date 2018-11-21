@@ -1,6 +1,7 @@
 #include "trajectory_generator.h"
 #include "Eigen/Dense"
 #include "utils.h"
+#include <iostream>
 
 using Eigen::Matrix3d;
 using Eigen::Vector3d;
@@ -37,7 +38,7 @@ PathPlanning::FTrajectory PathPlanning::TrajectoryGenerator::Generate(const Fren
     const double d_v = this->Eval(t, d_v_coeff);
     const double d_a = this->Eval(t, d_a_coeff);
 
-    const State s{s_p, s_v, s_a};
+    const State s{Map::Mod(s_p), s_v, s_a};
     const State d{d_p, d_v, d_a};
 
     trajectory.emplace_back(s, d);

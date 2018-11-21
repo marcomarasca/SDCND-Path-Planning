@@ -11,41 +11,41 @@ double PathPlanning::BehaviourPlanner::SafeDistance(double v) {
 PathPlanning::BehaviourPlanner::BehaviourPlanner(const TrajectoryGenerator &trajectory_generator)
     : trajectory_generator(trajectory_generator), trajectory_evaluator(MAX_SPEED) {}
 
-void PathPlanning::BehaviourPlanner::ResetPlan(const Frenet &state) { this->plan = state; };
+void PathPlanning::BehaviourPlanner::ResetPlan(const Frenet &state) {
+  this->plan.target = state;
+  this->plan.trajectory.clear();
+  this->plan.t = 0.0;
+};
 
-PathPlanning::FTrajectory PathPlanning::BehaviourPlanner::UpdatePlan(const Vehicle &ego, const Traffic &traffic,
-                                                                     double t, double processing_time) {
-  Frenet best_target;
-  FTrajectory best_trajectory;
+PathPlanning::Plan PathPlanning::BehaviourPlanner::UpdatePlan(const Vehicle &ego, const Traffic &traffic, double t,
+                                                              double processing_time) {
+  Plan best_plan;
   double min_cost = std::numeric_limits<double>::max();
   const size_t trajectory_length = this->trajectory_generator.TrajectoryLength(t);
 
   for (size_t target_lane : this->GetAvailableLanes(ego)) {
     LOG(DEBUG) << "Evaluating Lane: " << target_lane;
 
-    // Generate a candidate trajectory
-    Frenet target = this->PredictTarget(ego, traffic, target_lane, t);
-    FTrajectory trajectory = this->GenerateTrajectory(ego, target, trajectory_length, processing_time);
-    const double trajectory_cost = this->EvaluateTrajectory(trajectory, t, traffic);
+    // Generate a candidate plan
+    Plan plan = this->GeneratePlan(ego, traffic, t, processing_time, target_lane);
+    const double plan_cost = this->EvaluatePlan(plan, traffic);
 
-    LOG(DEBUG) << "Cost for Lane " << target_lane << ": " << trajectory_cost;
+    LOG(DEBUG) << "Cost for Lane " << target_lane << ": " << plan_cost;
 
-    if (trajectory_cost < min_cost) {
-      min_cost = trajectory_cost;
-      best_trajectory = trajectory;
-      best_target = target;
+    if (plan_cost < min_cost) {
+      min_cost = plan_cost;
+      best_plan = plan;
     }
   }
 
-  if (!best_trajectory.empty()) {
-    this->plan = best_target;
-
-    LOG(INFO) << "<------ Best Lane: " << Map::LaneIndex(best_target.d.p) << " (Cost: " << min_cost << ") ------>";
+  if (!best_plan.trajectory.empty()) {
+    this->plan = best_plan;
+    LOG(INFO) << "<------ Best Lane: " << Map::LaneIndex(best_plan.target.d.p) << " (Cost: " << min_cost << ") ------>";
   } else {
     LOG(WARN) << "<------ Cannot Compute Candidate ------>";
   }
 
-  return best_trajectory;
+  return best_plan;
 }
 
 std::vector<size_t> PathPlanning::BehaviourPlanner::GetAvailableLanes(const Vehicle &vehicle) const {
@@ -118,25 +118,40 @@ PathPlanning::Frenet PathPlanning::BehaviourPlanner::PredictTarget(const Vehicle
   return {{s_p, s_v, s_a}, {d_p, d_v, d_a}};
 }
 
-PathPlanning::FTrajectory PathPlanning::BehaviourPlanner::GenerateTrajectory(const Vehicle &ego, const Frenet &target,
-                                                                             size_t length, double processing_time) {
+PathPlanning::Plan PathPlanning::BehaviourPlanner::GeneratePlan(const Vehicle &ego, const Traffic &traffic, double t,
+                                                                double processing_time, size_t target_lane) {
   // Generates a trajectory considering the delay given by the processing time
-  size_t forward_steps =
-      std::min(ego.trajectory.size(), static_cast<size_t>(processing_time / this->trajectory_generator.step_dt));
+  size_t forward_steps = std::min(ego.trajectory.size(), this->trajectory_generator.TrajectoryLength(processing_time));
 
   LOG(DEBUG) << LOG_BUFFER << "Forward Steps: " << forward_steps;
 
+  // Generates a target for the given lane
+  Frenet target = this->PredictTarget(ego, traffic, target_lane, t);
+  size_t trajectory_length = this->trajectory_generator.TrajectoryLength(t);
+
   if (forward_steps == 0) {
-    return this->trajectory_generator.Generate(ego.state, target, length);
+    return {target, this->trajectory_generator.Generate(ego.state, target, trajectory_length), t};
   }
 
   Frenet start = ego.StateAt(forward_steps - 1);
+
+  // Fix for map wrapping
+  if (start.s.p >= target.s.p) {
+    LOG(WARN) << "Target Before Starting State: " << target.s.p << " - " << start.s.p;
+    target.s.p += MAP_MAX_S;
+  }
+
+  // Copies the head of the trajectory till
   FTrajectory trajectory{ego.trajectory.begin(), ego.trajectory.begin() + forward_steps};
-  FTrajectory trajectory_tail = this->trajectory_generator.Generate(start, target, length - forward_steps);
-  trajectory.reserve(length);
+  trajectory.reserve(trajectory_length);
+
+  // Generates the tail of the trajectory
+  FTrajectory trajectory_tail = this->trajectory_generator.Generate(start, target, trajectory_length - forward_steps);
+
+  // Append the tail to the original trajectory
   trajectory.insert(trajectory.end(), trajectory_tail.begin(), trajectory_tail.end());
 
-  return trajectory;
+  return {target, trajectory, t};
 }
 
 bool PathPlanning::BehaviourPlanner::GetVehicleAhead(const Vehicle &ego, const Traffic &traffic, size_t target_lane,
@@ -154,7 +169,6 @@ bool PathPlanning::BehaviourPlanner::GetVehicleAhead(const Vehicle &ego, const T
   return found;
 }
 
-double PathPlanning::BehaviourPlanner::EvaluateTrajectory(const FTrajectory &trajectory, double t,
-                                                          const Traffic &traffic) const {
-  return this->trajectory_evaluator.Evaluate(trajectory, t, traffic, this->plan);
+double PathPlanning::BehaviourPlanner::EvaluatePlan(const Plan &plan, const Traffic &traffic) const {
+  return this->trajectory_evaluator.Evaluate(plan.trajectory, plan.t, traffic, this->plan.target);
 }
