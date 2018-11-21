@@ -25,13 +25,13 @@ const double TRAJECTORY_STEP_DT = 0.02;
 // Min number of second for the processing time to consider when including points from the past trajectory
 const double MIN_PROCESSING_TIME = 5 * TRAJECTORY_STEP_DT;
 // Max speed in m/s
-const double MAX_SPEED = Mph2ms(48);
+const double MAX_SPEED = Mph2ms(47);
 // Min speed in m/s
 const double MIN_SPEED = Mph2ms(15);
 // Max acceleration in m/s^2
 const double MAX_ACC = 10;
 // Number of meters ahead of the road to draw, must be multiple of vehicle length
-const double DRAW_AHEAD = 250;
+const double DRAW_AHEAD = 135;
 // Number of meters behind of the road to draw, must be multiple of vehicle length
 const double DRAW_BEHIND = 50;
 
