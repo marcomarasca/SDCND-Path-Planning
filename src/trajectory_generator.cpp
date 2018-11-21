@@ -24,15 +24,15 @@ PathPlanning::FTrajectory PathPlanning::TrajectoryGenerator::Generate(const Fren
   trajectory.reserve(length);
   Frenet prev_state = start;
 
-  // Maximum delta when moving s
-  static const double max_s_delta = this->max_speed * this->step_dt + 0.5 * this->max_acc * std::pow(this->step_dt, 2);
-  // Computes the values for each step of the trajectory
   for (size_t i = 1; i <= length; ++i) {
     const double t = i * this->step_dt;
 
+    const double max_s_delta = prev_state.s.v * this->step_dt + 0.5 * prev_state.s.a * this->step_dt * this->step_dt;
+
+    // Reduces longitudinal values to meet speed and acceleration constraints
     const double s_p = std::min(this->Eval(t, s_p_coeff), prev_state.s.p + max_s_delta);
-    const double s_v = std::min(this->Eval(t, s_v_coeff), max_speed);
-    const double s_a = std::max(std::min(this->Eval(t, s_a_coeff), max_acc), -max_acc);
+    const double s_v = std::min(this->Eval(t, s_v_coeff), this->max_speed);
+    const double s_a = std::max(std::min(this->Eval(t, s_a_coeff), this->max_acc), -this->max_acc);
 
     const double d_p = this->Eval(t, d_p_coeff);
     const double d_v = this->Eval(t, d_v_coeff);

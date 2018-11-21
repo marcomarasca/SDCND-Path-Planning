@@ -8,6 +8,9 @@
 
 namespace PathPlanning {
 
+const double OUTER_LANE_SPEED_FACTOR = 0.2;
+const double CHANGE_LANE_SPEED_FACTOR = 0.9;
+
 class BehaviourPlanner {
  private:
   const TrajectoryGenerator &trajectory_generator;
@@ -47,7 +50,8 @@ class BehaviourPlanner {
   /**
    * Generates a new candidate plan for the given target lane, accounting for the delay given by the processing time
    */
-  Plan GeneratePlan(const Vehicle &ego, const Traffic &traffic, double t, double processing_time, size_t target_lane) const;
+  Plan GeneratePlan(const Vehicle &ego, const Traffic &traffic, double t, double processing_time,
+                    size_t target_lane) const;
 
   /**
    * Evaluates the given plan considering the sorrounding traffic

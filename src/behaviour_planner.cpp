@@ -71,7 +71,8 @@ PathPlanning::Frenet PathPlanning::BehaviourPlanner::PredictTarget(const Vehicle
 
   const int lane_delta = static_cast<int>(target_lane) - static_cast<int>(start_lane);
   // Limits max speed when changing lanes + slightly reduce speed for outer lane (e.g. right lane is slower traffic)
-  const double max_speed = this->max_speed - std::abs(lane_delta) - 0.2 * target_lane;
+  const double speed_delta = CHANGE_LANE_SPEED_FACTOR * std::abs(lane_delta) - OUTER_LANE_SPEED_FACTOR * target_lane;
+  const double max_speed = this->max_speed - speed_delta;
   // Limits the acceleration when going slower
   const double max_acc = start.s.v < this->min_speed ? this->max_acc / 2.0 : this->max_acc;
 
