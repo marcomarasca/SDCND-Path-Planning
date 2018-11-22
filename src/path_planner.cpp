@@ -67,15 +67,17 @@ void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
     return;
   }
 
-  std::map<int, Vehicle> vehicles;
+  std::map<int, Pair> vehicles;
 
-  // Reserve some space in the lane
   for (auto &lane : this->traffic) {
-    for (auto &vehicle : lane) {
-      vehicles.emplace(vehicle.id, vehicle);
-    }
+    // Reserve some space in the lane
     lane.clear();
     lane.reserve(sensor_fusion.size() / traffic.size());
+    // Maps vehicles id to their frenet coordinates
+    std::for_each(lane.begin(), lane.end(), [&vehicles](const Vehicle &v) {
+      Pair coord{v.state.s.p, v.state.d.p};
+      vehicles.emplace(v.id, coord);
+    });
   }
 
   // Reads sensor fusion data and maps it to the current vehicles
@@ -91,33 +93,30 @@ void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
       continue;
     }
 
-    double prev_s_p = s_p;
-    double prev_d_p = d_p;
+    Pair prev{s_p, d_p};
 
     auto it = vehicles.find(id);
 
     if (it != vehicles.end()) {
-      auto &vehicle = it->second;
-      prev_s_p = vehicle.state.s.p;
-      prev_d_p = vehicle.state.d.p;
+      prev = it->second;
     }
 
-    if (std::fabs(prev_d_p - d_p) > LANE_WIDTH) {
-      LOG(DEBUG) << "Conflicting Displacement for Vehicle " << id << " (Received: " << d_p << ", Previous: " << prev_d_p
-                 << ")";
-      d_p = prev_d_p;
+    // Accounts for invalid data sent by the simulator when the maps wraps around
+
+    if (Map::ModDistance(s_p, prev.first) < 0) {  // Vehicles do not go back in time
+      LOG(WARN) << "Invalid S for Vehicle " << id << " (Received: " << s_p << ", Previous: " << prev.first << ")";
+      s_p = prev.first;
     }
 
-    if (std::fabs(prev_s_p - s_p) > 2 * VEHICLE_LENGTH) {
-      LOG(DEBUG) << "Conflicting Movement for Vehicle " << id << " (Received: " << s_p << ", Previous: " << prev_s_p
-                 << ")";
-      s_p = prev_s_p;
+    if (std::fabs(d_p - prev.second) > LANE_WIDTH) {  // Vehicles cannot move right/left too much
+      LOG(WARN) << "Invalid D for Vehicle " << id << " (Received: " << d_p << ", Previous: " << prev.second << ")";
+      d_p = prev.second;
     }
 
     size_t lane = Map::LaneIndex(d_p);
 
     if (Map::InvalidLane(lane)) {
-      LOG(DEBUG) << "Invalid Lane for Vehicle " << id << " (Lane: " << lane << ")";
+      LOG(WARN) << "Invalid Lane for Vehicle " << id << " (Lane: " << lane << ")";
       continue;
     }
 
@@ -172,7 +171,7 @@ PathPlanning::CTrajectory PathPlanning::PathPlanner::GetTrajectory() const {
   return trajectory_generator.FrenetToCartesian(this->ego.trajectory);
 }
 
-void PathPlanning::PathPlanner::DrawRoad() {
+void PathPlanning::PathPlanner::DrawRoad(double processing_time) {
   const size_t ego_lane = this->ego.GetLane();
   const double target_s_p = this->ego.trajectory.back().s.p;
   const size_t target_lane = Map::LaneIndex(this->ego.trajectory.back().d.p);
@@ -180,32 +179,38 @@ void PathPlanning::PathPlanner::DrawRoad() {
   // Clear the screen to avoid flickering, *nix only
   std::cout << "\x1b[H\x1b[J";
 #endif
+  std::cout << "P: " << this->ego.state.s.p << " m" << '\n';
+  std::cout << "L: " << Map::LaneIndex(this->ego.trajectory.back().d.p) << '\n';
+  std::cout << "T: " << processing_time << " s\n\n";
   for (int i = DRAW_AHEAD; i > -DRAW_BEHIND; i -= VEHICLE_LENGTH) {
     const double ref_s = this->ego.state.s.p + i;
     size_t lane_n = 0;
     for (auto &lane_traffic : traffic) {
-      std::cout << "|";
+      if (lane_n == 0) {
+        std::cout << "\033[1;33m";
+      }
+      std::cout << "|\033[0m";
       bool empty_lane = true;
       for (auto &vehicle : lane_traffic) {
         if (std::fabs(Map::ModDistance(ref_s, vehicle.state.s.p)) <= VEHICLE_LENGTH / 2) {
           empty_lane = false;
-          std::cout << " " << std::setfill('0') << std::setw(2) << vehicle.id << " ";
+          std::cout << "\033[1;7;33m "<< std::setfill('0') << std::setw(2) << vehicle.id << " \033[0m";
           break;
         }
       }
       if (empty_lane) {
         if (lane_n == ego_lane && this->ego.state.s.p == ref_s) {
-          std::cout << "[<>]";  // Ego vehicle
+          std::cout << "\033[1;32m[<>]\033[0m";  // Ego vehicle
           double target_s_p = this->ego.trajectory.back().s.p;
         } else if (lane_n == target_lane && std::fabs(Map::ModDistance(ref_s, target_s_p)) <= VEHICLE_LENGTH / 2) {
-          std::cout << "[><]";  // Trajectory target
+          std::cout << "\033[1;36m[><]\033[0m";  // Trajectory target
         } else {
           std::cout << "    ";  // Empty
         }
       }
       ++lane_n;
     }
-    std::cout << "|\n";
+    std::cout << "|\033[0m\n";
   }
   std::cout << std::flush;
 }

@@ -14,10 +14,11 @@ using PathPlanning::LOG;
 
 namespace PathPlanning {
 LogConfig LOG_CONFIG;
-}
 
-bool draw_mode = false;
-PathPlanning::TimePoint last_update = PathPlanning::Timer::Now();
+static const double REFRESH_RATE = 100;
+static PathPlanning::TimePoint LAST_REFRESH = PathPlanning::Timer::Now();
+static bool DRAW_MODE = false;
+}  // namespace PathPlanning
 
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
@@ -43,18 +44,17 @@ void ProcessTelemetry(uWS::WebSocket<uWS::SERVER> &ws, PathPlanning::PathPlanner
   // Updates the state of the planner using the data from the telemetry
   PathPlanning::TimePoint update_s = timer.Start();
 
-  double processing_time = PathPlanning::Ms2s(PathPlanning::Timer::ToMilliseconds(timer.AverageDuration()).count());
+  const double processing_time =
+      PathPlanning::Ms2s(PathPlanning::Timer::ToMilliseconds(timer.AverageDuration()).count());
 
-  processing_time = std::max(processing_time, PathPlanning::MIN_PROCESSING_TIME);
+  planner.Update(telemetry, std::max(processing_time, PathPlanning::MIN_PROCESSING_TIME));
 
-  planner.Update(telemetry, processing_time);
+  if (PathPlanning::DRAW_MODE) {
+    PathPlanning::Duration delta = PathPlanning::Timer::Now() - PathPlanning::LAST_REFRESH;
 
-  if (draw_mode) {
-    PathPlanning::Duration delta = PathPlanning::Timer::Now() - last_update;
-
-    if (PathPlanning::Timer::ToMilliseconds(delta).count() >= 100) {
-      planner.DrawRoad();
-      last_update = PathPlanning::Timer::Now();
+    if (PathPlanning::Timer::ToMilliseconds(delta).count() >= PathPlanning::REFRESH_RATE) {
+      planner.DrawRoad(processing_time);
+      PathPlanning::LAST_REFRESH = PathPlanning::Timer::Now();
     }
   }
 
@@ -126,7 +126,7 @@ void StartServer(PathPlanning::Map &map) {
     LOG(PathPlanning::INFO) << "Listening to port " << port;
 
     // Configure draw mode
-    if (draw_mode) {
+    if (PathPlanning::DRAW_MODE) {
       PathPlanning::LOG_CONFIG.enabled = false;
     }
   } else {
@@ -145,7 +145,7 @@ int main(int argc, char *argv[]) {
   }
 
   // Configure logger/ draw mode
-  draw_mode = false;
+  PathPlanning::DRAW_MODE = false;
   PathPlanning::LOG_CONFIG.level = PathPlanning::LogLevel::DEBUG;
 
   PathPlanning::Map map;

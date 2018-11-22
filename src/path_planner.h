@@ -24,7 +24,7 @@ const double MAX_SPEED = Mph2ms(47);
 // Min speed in m/s
 const double MIN_SPEED = Mph2ms(15);
 // Max acceleration in m/s^2
-const double MAX_ACC = 10;
+const double MAX_ACC = 10.0;
 // Number of meters ahead of the road to draw, must be multiple of vehicle length
 const double DRAW_AHEAD = 135;
 // Number of meters behind of the road to draw, must be multiple of vehicle length
@@ -61,7 +61,7 @@ class PathPlanner {
   /**
    * Draws to standard output a representation of the current status
    */
-  void DrawRoad();
+  void DrawRoad(double processing_time);
 
  private:
   /**
