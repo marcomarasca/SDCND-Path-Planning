@@ -60,6 +60,12 @@ void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
 
   LOG(INFO) << "Updating Traffic Data (Sensed Vehicles: " << sensor_fusion.size() << ")";
 
+  // Keeps old data
+  if (sensor_fusion.empty()) {
+    LOG(DEBUG) << "Invalid Sensor Data (Empty List)";
+    return;
+  }
+
   // Reserve some space in the lane
   for (auto &lane : this->traffic) {
     lane.clear();
@@ -75,12 +81,14 @@ void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
     double d_p = vehicle_telemetry[6];
 
     if (d_p < 0) {  // Vehicle not on the rendered yet
+      LOG(DEBUG) << "Invalid Displacement for Vehicle " << id << " (Displacement: " << d_p << ")";
       continue;
     }
 
     size_t lane = Map::LaneIndex(d_p);
 
     if (Map::InvalidLane(lane)) {
+      LOG(DEBUG) << "Invalid Lane for Vehicle " << id << " (Lane: " << lane << ")";
       continue;
     }
 
@@ -135,21 +143,21 @@ PathPlanning::CTrajectory PathPlanning::PathPlanner::GetTrajectory() const {
 }
 
 void PathPlanning::PathPlanner::DrawRoad() {
-  size_t ego_lane = this->ego.GetLane();
-  double target_s_p = this->ego.trajectory.back().s.p;
-  size_t target_lane = Map::LaneIndex(this->ego.trajectory.back().d.p);
-  #if defined (__LINUX__) || defined(__gnu_linux__) || defined(__linux__)
-      // Clear the screen to avoid flickering, *nix only
-      std::cout<<"\x1B[2J\x1B[H"<<std::flush;
-  #endif
+  const size_t ego_lane = this->ego.GetLane();
+  const double target_s_p = this->ego.trajectory.back().s.p;
+  const size_t target_lane = Map::LaneIndex(this->ego.trajectory.back().d.p);
+#if defined(__LINUX__) || defined(__gnu_linux__) || defined(__linux__)
+  // Clear the screen to avoid flickering, *nix only
+  std::cout << "\x1b[H\x1b[J";
+#endif
   for (int i = DRAW_AHEAD; i > -DRAW_BEHIND; i -= VEHICLE_LENGTH) {
-    double ref_s = this->ego.state.s.p + i;
+    const double ref_s = this->ego.state.s.p + i;
     size_t lane_n = 0;
     for (auto &lane_traffic : traffic) {
       std::cout << "|";
       bool empty_lane = true;
       for (auto &vehicle : lane_traffic) {
-        if (vehicle.state.s.p > ref_s - VEHICLE_LENGTH / 2 && vehicle.state.s.p < ref_s + VEHICLE_LENGTH / 2) {
+        if (std::fabs(Map::ModDistance(ref_s, vehicle.state.s.p)) <= VEHICLE_LENGTH / 2) {
           empty_lane = false;
           std::cout << " " << std::setfill('0') << std::setw(2) << vehicle.id << " ";
           break;
@@ -159,8 +167,7 @@ void PathPlanning::PathPlanner::DrawRoad() {
         if (lane_n == ego_lane && this->ego.state.s.p == ref_s) {
           std::cout << "[<>]";  // Ego vehicle
           double target_s_p = this->ego.trajectory.back().s.p;
-        } else if (lane_n == target_lane && target_s_p > ref_s - VEHICLE_LENGTH / 2 &&
-                   target_s_p < ref_s + VEHICLE_LENGTH / 2) {
+        } else if (lane_n == target_lane && std::fabs(Map::ModDistance(ref_s, target_s_p)) <= VEHICLE_LENGTH / 2) {
           std::cout << "[><]";  // Trajectory target
         } else {
           std::cout << "    ";  // Empty
@@ -168,6 +175,7 @@ void PathPlanning::PathPlanner::DrawRoad() {
       }
       ++lane_n;
     }
-    std::cout << "|" << std::endl;
+    std::cout << "|\n";
   }
+  std::cout << std::flush;
 }

@@ -1,13 +1,8 @@
 #ifndef PP_PATH_PLANNER_H
 #define PP_PATH_PLANNER_H
 
-#include <array>
-#include <map>
-#include <vector>
-
-#include "json.hpp"
-
 #include "behaviour_planner.h"
+#include "json.hpp"
 #include "map.h"
 #include "trajectory_generator.h"
 #include "vehicle.h"
@@ -17,7 +12,7 @@ namespace PathPlanning {
 // Id of the ego vehicle
 const int EGO_ID = -1;
 // Ego vehicle range in meters for vehicles detection (in front and behind)
-const double RANGE = 80;
+const double RANGE = 100;
 // Total time in seconds for the trajectory
 const double TRAJECTORY_T = 2.0;
 // Delta t between trajectory points in seconds (same as simulator controller update rate)

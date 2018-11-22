@@ -17,6 +17,7 @@ LogConfig LOG_CONFIG;
 }
 
 bool draw_mode = false;
+PathPlanning::TimePoint last_update = PathPlanning::Timer::Now();
 
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
@@ -49,7 +50,12 @@ void ProcessTelemetry(uWS::WebSocket<uWS::SERVER> &ws, PathPlanning::PathPlanner
   planner.Update(telemetry, processing_time);
 
   if (draw_mode) {
-    planner.DrawRoad();
+    PathPlanning::Duration delta = PathPlanning::Timer::Now() - last_update;
+
+    if (PathPlanning::Timer::ToMilliseconds(delta).count() >= 100) {
+      planner.DrawRoad();
+      last_update = PathPlanning::Timer::Now();
+    }
   }
 
   PathPlanning::Duration update_d = timer.Eval(update_s);

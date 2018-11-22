@@ -13,6 +13,8 @@ const double MAP_MAX_S = 6945.554;
 const double LANE_WIDTH = 4.0;
 // Number of availble lanes
 const size_t LANES_N = 3;
+// Bugfix for simulator bug
+const double MAP_MAX_D = 9.9;
 
 using Pair = std::pair<double, double>;
 

@@ -80,11 +80,11 @@ class Timer {
 
   Duration TotalDuration() { return elapsed_total; }
 
+  inline static TimePoint Now() { return std::chrono::steady_clock::now(); }
+
  private:
   Duration elapsed_total;
   size_t iterations;
-
-  inline TimePoint Now() { return std::chrono::steady_clock::now(); }
 };
 
 /**
