@@ -1,5 +1,6 @@
 #include "path_planner.h"
 #include <algorithm>
+#include <map>
 #include "logger.h"
 #include "utils.h"
 
@@ -66,8 +67,13 @@ void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
     return;
   }
 
+  std::map<int, Vehicle> vehicles;
+
   // Reserve some space in the lane
   for (auto &lane : this->traffic) {
+    for (auto &vehicle : lane) {
+      vehicles.emplace(vehicle.id, vehicle);
+    }
     lane.clear();
     lane.reserve(sensor_fusion.size() / traffic.size());
   }
@@ -83,6 +89,29 @@ void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
     if (d_p < 0) {  // Vehicle not on the rendered yet
       LOG(DEBUG) << "Invalid Displacement for Vehicle " << id << " (Displacement: " << d_p << ")";
       continue;
+    }
+
+    double prev_s_p = s_p;
+    double prev_d_p = d_p;
+
+    auto it = vehicles.find(id);
+
+    if (it != vehicles.end()) {
+      auto &vehicle = it->second;
+      prev_s_p = vehicle.state.s.p;
+      prev_d_p = vehicle.state.d.p;
+    }
+
+    if (std::fabs(prev_d_p - s_p) > LANE_WIDTH) {
+      LOG(DEBUG) << "Conflicting Displacement for Vehicle " << id << " (Received: " << d_p << ", Previous: " << prev_d_p
+                 << ")";
+      d_p = prev_d_p;
+    }
+
+    if (std::fabs(prev_s_p - s_p) > 2 * VEHICLE_LENGTH) {
+      LOG(DEBUG) << "Conflicting Movement for Vehicle " << id << " (Received: " << s_p << ", Previous: " << prev_s_p
+                 << ")";
+      s_p = prev_s_p;
     }
 
     size_t lane = Map::LaneIndex(d_p);
@@ -108,6 +137,7 @@ void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
 
   const double s = this->ego.state.s.p;
   size_t lane = 0;
+  
   for (auto &lane_traffic : this->traffic) {
     LOG(DEBUG) << LOG_BUFFER << "Lane " << lane << " Traffic: " << lane_traffic.size();
     // Sort the vehicles by distance to the ego vehicle
