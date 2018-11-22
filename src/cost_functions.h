@@ -29,6 +29,10 @@ using CostFunction = std::function<double(const Plan &plan, const Plan &previous
 
 namespace CostFunctions {
 
+// Min distance to react before chaning lane due to traffic or slow speed ahead
+// TODO Should be parameterized be current velocity
+const double TRAFFIC_REACTION_HORIZON = 40;
+
 /**
  * Collision cost: returns 1.0 if a collision will happen anywhere in the trajectory according to the given traffic
  * data, 0.0 otherwise

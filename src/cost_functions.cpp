@@ -50,8 +50,9 @@ double PathPlanning::CostFunctions::LaneSpeedCost(const Plan &plan, const Plan &
                                                   double max_speed) {
   double lane_speed_cost = 0.0;
 
-  if (traffic_data.lane_traffic > 0) {
-    lane_speed_cost = Logistic((max_speed - traffic_data.lane_speed) / max_speed);
+  if (traffic_data.lane_traffic > 0 && traffic_data.min_distance < TRAFFIC_REACTION_HORIZON) {
+    const double lane_speed = std::min(max_speed, traffic_data.lane_speed);
+    lane_speed_cost = Logistic((max_speed - lane_speed) / max_speed);
   }
 
   LOG(DEBUG) << LOG_BUFFER << std::left << std::setw(COST_LOG_BUFFER) << "Lane Speed Cost: " << std::setw(COST_LOG_W)
@@ -66,15 +67,15 @@ double PathPlanning::CostFunctions::LaneTrafficCost(const Plan &plan, const Plan
   // Lane traffic cost
   double lane_traffic_cost = 0.0;
 
-  if (traffic_data.tot_traffic > 0) {
-    // TODO should factor in the distance of the vehicles ahead (e.g. if there is traffic but it's far then lower cost)
-    // const double distance_factor = VEHICLE_LENGTH * 2/traffic_data.min_distance;
-    lane_traffic_cost = Logistic(static_cast<double>(traffic_data.lane_traffic) / traffic_data.tot_traffic);
+  if (traffic_data.tot_traffic > 0 && traffic_data.min_distance < TRAFFIC_REACTION_HORIZON) {
+    // The smaller the distance the bigger the cost
+    const double distance_factor = (TRAFFIC_REACTION_HORIZON - traffic_data.min_distance) / TRAFFIC_REACTION_HORIZON;
+    lane_traffic_cost = Logistic((double(traffic_data.lane_traffic) + distance_factor) / traffic_data.tot_traffic);
   }
 
   LOG(DEBUG) << LOG_BUFFER << std::left << std::setw(COST_LOG_BUFFER) << "Traffic Cost: " << std::setw(COST_LOG_W)
-             << lane_traffic_cost << " (Lane Traffic: " << traffic_data.lane_traffic
-             << ", Total Traffic: " << traffic_data.tot_traffic << ")";
+             << lane_traffic_cost << " (Traffic: " << traffic_data.lane_traffic
+             << ", Distance: " << traffic_data.min_distance << ")";
 
   return lane_traffic_cost;
 }
