@@ -8,7 +8,7 @@
 
 namespace PathPlanning {
 
-const double OUTER_LANE_SPEED_FACTOR = 0.5;
+const double OUTER_LANE_SPEED_FACTOR = 0.3;
 const double CHANGE_LANE_SPEED_FACTOR = 0.9;
 
 class BehaviourPlanner {
