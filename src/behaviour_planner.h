@@ -64,10 +64,6 @@ class BehaviourPlanner {
    */
   bool GetVehicleAhead(const Vehicle &ego, const Traffic &traffic, size_t target_lane, Vehicle &ahead) const;
 
-  /**
-   * Computes a safe distance at the given velocity (e.g. the breaking distance at the max allowed acceleration)
-   */
-  double SafeDistance(double v) const;
 };
 
 }  // namespace PathPlanning

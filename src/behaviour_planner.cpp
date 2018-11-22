@@ -91,7 +91,9 @@ PathPlanning::Frenet PathPlanning::BehaviourPlanner::PredictTarget(const Vehicle
   Vehicle ahead(-1);
   if (this->GetVehicleAhead(ego, traffic, target_lane, ahead)) {
     const double distance = Map::ModDistance(ahead.state.s.p, start.s.p);
-    const double safe_distance = this->SafeDistance(ahead.trajectory.back().s.v);
+
+    // Computes breaking safe distance
+    const double safe_distance = ahead.SafeDistance(ahead.trajectory.size() - 1, this->max_acc);
 
     LOG(DEBUG) << LOG_BUFFER << "Vehicle " << ahead.id << " Ahead in " << distance
                << " m (Safe Distance: " << safe_distance << " m)";
@@ -174,10 +176,6 @@ bool PathPlanning::BehaviourPlanner::GetVehicleAhead(const Vehicle &ego, const T
     }
   }
   return found;
-}
-
-double PathPlanning::BehaviourPlanner::SafeDistance(double v) const {
-  return std::pow(v, 2) / (2 * this->max_acc) + 2 * VEHICLE_LENGTH;
 }
 
 double PathPlanning::BehaviourPlanner::EvaluatePlan(const Plan &plan, const Traffic &traffic) const {

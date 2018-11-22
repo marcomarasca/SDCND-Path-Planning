@@ -41,3 +41,8 @@ PathPlanning::Frenet PathPlanning::Vehicle::PredictStateAt(double t) const {
   const double d_v = this->state.d.v + this->state.d.a * t;
   return {{s_p, this->state.s.v, this->state.s.a}, {d_p, this->state.d.v, this->state.d.a}};
 }
+
+double PathPlanning::Vehicle::SafeDistance(size_t trajectory_step, double max_acc) const {
+  assert(trajectory_step < this->trajectory.size());
+  return std::pow(this->trajectory[trajectory_step].s.v, 2) / (2 * max_acc) + 2 * VEHICLE_LENGTH;
+}

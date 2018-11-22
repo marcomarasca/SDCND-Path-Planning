@@ -38,6 +38,12 @@ class Vehicle {
   Frenet PredictStateAt(double t) const;
 
   /**
+   * Computes a safe distance at the velocity (e.g. the breaking distance at the max allowed acceleration) at the given
+   * step in the trajectory considering the maximum given acceleration
+   */
+  double SafeDistance(size_t trajectory_step, double max_acc) const;
+
+  /**
    * Updates the current state of the vehicle
    */
   void UpdateState(const Frenet &state);
