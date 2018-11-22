@@ -67,6 +67,8 @@ double PathPlanning::CostFunctions::LaneTrafficCost(const Plan &plan, const Plan
   double lane_traffic_cost = 0.0;
 
   if (traffic_data.tot_traffic > 0) {
+    // TODO should factor in the distance of the vehicles ahead (e.g. if there is traffic but it's far then lower cost)
+    // const double distance_factor = VEHICLE_LENGTH * 2/traffic_data.min_distance;
     lane_traffic_cost = Logistic(static_cast<double>(traffic_data.lane_traffic) / traffic_data.tot_traffic);
   }
 

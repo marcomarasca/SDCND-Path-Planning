@@ -10,8 +10,13 @@ namespace PathPlanning {
  * Structure to hold the target lane traffic data such as the lane speed and traffic ahead
  */
 struct TrafficData {
+  // The number of vehicle ahead of the current vehicle
   size_t lane_traffic;
+  // The distance of the closest vehicle ahead
+  double min_distance;
+  // The average speed of the vehicles ahead of the current vehicle
   double lane_speed;
+  // Total number of vehicles detected (ahead and behind in any lane)
   size_t tot_traffic;
 };
 

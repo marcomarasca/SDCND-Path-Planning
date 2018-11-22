@@ -47,29 +47,33 @@ PathPlanning::TrafficData PathPlanning::PlanEvaluator::GetTrafficData(const FTra
   size_t target_lane = Map::LaneIndex(trajectory.back().d.p);
   size_t lane_traffic = 0;
   double lane_speed = std::numeric_limits<double>::max();
+  double min_distance = std::numeric_limits<double>::max();
   size_t tot_traffic = 0;
 
   for (size_t i = 0; i < traffic.size(); ++i) {
     auto &lane = traffic[i];
     tot_traffic += lane.size();
-    if (i == target_lane && !lane.empty()) {
-      lane_speed = 0.0;
-      const double start_s = trajectory.front().s.p;
-      for (auto &vehicle : traffic[target_lane]) {
-        if (Map::ModDistance(vehicle.state.s.p, start_s) > 0) {
-          lane_speed += vehicle.state.s.v;
-          lane_traffic++;
-        }
+    if (i != target_lane || lane.empty()) {
+      continue;
+    }
+    lane_speed = 0.0;
+    const double start_s = trajectory.front().s.p;
+    for (auto &vehicle : traffic[target_lane]) {
+      const double distance = Map::ModDistance(vehicle.state.s.p, start_s);
+      if (distance > 0) {
+        lane_speed += vehicle.state.s.v;
+        ++lane_traffic;
+        min_distance = std::min(min_distance, distance);
       }
-      if (lane_traffic > 0) {
-        lane_speed /= lane_traffic;
-      } else {
-        lane_speed = std::numeric_limits<double>::max();
-      }
+    }
+    if (lane_traffic > 0) {
+      lane_speed /= lane_traffic;
+    } else {
+      lane_speed = std::numeric_limits<double>::max();
     }
   }
 
-  return {lane_traffic, lane_speed, tot_traffic};
+  return {lane_traffic, min_distance, lane_speed, tot_traffic};
 }
 
 PathPlanning::Collision PathPlanning::PlanEvaluator::DetectCollision(const FTrajectory &trajectory1,
