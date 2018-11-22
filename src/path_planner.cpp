@@ -102,7 +102,7 @@ void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
       prev_d_p = vehicle.state.d.p;
     }
 
-    if (std::fabs(prev_d_p - s_p) > LANE_WIDTH) {
+    if (std::fabs(prev_d_p - d_p) > LANE_WIDTH) {
       LOG(DEBUG) << "Conflicting Displacement for Vehicle " << id << " (Received: " << d_p << ", Previous: " << prev_d_p
                  << ")";
       d_p = prev_d_p;
@@ -137,7 +137,7 @@ void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
 
   const double s = this->ego.state.s.p;
   size_t lane = 0;
-  
+
   for (auto &lane_traffic : this->traffic) {
     LOG(DEBUG) << LOG_BUFFER << "Lane " << lane << " Traffic: " << lane_traffic.size();
     // Sort the vehicles by distance to the ego vehicle
