@@ -12,12 +12,12 @@ PathPlanning::PathPlanner::PathPlanner(Map &map, size_t lane_n)
       behaviour_planner(this->trajectory_generator, MAX_SPEED, MIN_SPEED, MAX_ACC) {}
 
 void PathPlanning::PathPlanner::Update(const json &telemetry, double processing_time) {
-  LOG(INFO) << "<------ Updating Path Planner (Processing time: " << processing_time << " s) ------>";
+  LOG(INFO) << "Updating Path Planner (Processing time: " << processing_time << " s)";
 
   this->UpdateEgo(telemetry);
   this->UpdateTraffic(telemetry);
   this->UpdatePredictions();
-  this->UpdatePlan(processing_time);
+  this->UpdatePlan(std::max(processing_time, MIN_PROCESSING_TIME));
 }
 
 void PathPlanning::PathPlanner::UpdateEgo(const json &telemetry) {
@@ -32,12 +32,12 @@ void PathPlanning::PathPlanner::UpdateEgo(const json &telemetry) {
 
   const size_t col_w = 12;
 
-  LOG(INFO) << "Updating Vehicle State (Consumed Steps: " << steps_consumed << ", Unvisited Steps: " << steps_to_go
+  LOG(INFO) << LOG_P << "Updating Vehicle State (Consumed: " << steps_consumed << ", Unvisited: " << steps_to_go
             << "): ";
-  LOG(INFO) << LOG_BUFFER << std::setw(col_w) << "Telemetry: " << std::setw(col_w) << "s_p" << std::setw(col_w) << "d_p"
-            << std::setw(col_w) << "s_v" << std::setw(col_w) << "d_v";
-  LOG(INFO) << LOG_BUFFER << std::setw(col_w) << "Received: " << std::setw(col_w) << state.s.p << std::setw(col_w)
-            << state.d.p << std::setw(col_w) << state.s.v << std::setw(col_w) << state.d.v;
+  LOG(INFO) << LOG_P1 << std::left << std::setw(col_w) << "Telemetry: " << std::setw(col_w) << "s_p" << std::setw(col_w)
+            << "d_p" << std::setw(col_w) << "s_v" << std::setw(col_w) << "d_v";
+  LOG(INFO) << LOG_P1 << std::left << std::setw(col_w) << "Received: " << std::setw(col_w) << state.s.p
+            << std::setw(col_w) << state.d.p << std::setw(col_w) << state.s.v << std::setw(col_w) << state.d.v;
 
   this->ego.UpdateState(state);
 
@@ -50,7 +50,7 @@ void PathPlanning::PathPlanner::UpdateEgo(const json &telemetry) {
     this->ego.ForwardState(steps_consumed - 1);
   }
 
-  LOG(INFO) << LOG_BUFFER << std::setw(col_w) << "Using: " << std::setw(col_w) << this->ego.state.s.p
+  LOG(INFO) << LOG_P1 << std::left << std::setw(col_w) << "Using: " << std::setw(col_w) << this->ego.state.s.p
             << std::setw(col_w) << this->ego.state.d.p << std::setw(col_w) << this->ego.state.s.v << std::setw(col_w)
             << this->ego.state.d.v;
 }
@@ -59,11 +59,11 @@ void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
   // Sensor Fusion Data, a list of all other cars on the same side of the road.
   auto sensor_fusion = telemetry["sensor_fusion"];
 
-  LOG(INFO) << "Updating Traffic Data (Sensed Vehicles: " << sensor_fusion.size() << ")";
+  LOG(INFO) << LOG_P << "Updating Traffic Data (Sensed Vehicles: " << sensor_fusion.size() << ")";
 
   // Keeps old data
   if (sensor_fusion.empty()) {
-    LOG(DEBUG) << "Invalid Sensor Data (Empty List)";
+    LOG(DEBUG) << LOG_P1 << "Invalid Sensor Data (Empty List)";
     return;
   }
 
@@ -89,7 +89,7 @@ void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
     double d_p = vehicle_telemetry[6];
 
     if (d_p < 0) {  // Vehicle not on the rendered yet
-      LOG(DEBUG) << "Invalid Displacement for Vehicle " << id << " (Displacement: " << d_p << ")";
+      LOG(DEBUG) << LOG_P1 << "Invalid Displacement for Vehicle " << id << " (Displacement: " << d_p << ")";
       continue;
     }
 
@@ -104,19 +104,21 @@ void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
     // Accounts for invalid data sent by the simulator when the maps wraps around
 
     if (Map::ModDistance(s_p, prev.first) < 0) {  // Vehicles do not go back in time
-      LOG(WARN) << "Invalid S for Vehicle " << id << " (Received: " << s_p << ", Previous: " << prev.first << ")";
+      LOG(WARN) << LOG_P1 << "Invalid S for Vehicle " << id << " (Received: " << s_p << ", Previous: " << prev.first
+                << ")";
       s_p = prev.first;
     }
 
     if (std::fabs(d_p - prev.second) > LANE_WIDTH) {  // Vehicles cannot move right/left too much
-      LOG(WARN) << "Invalid D for Vehicle " << id << " (Received: " << d_p << ", Previous: " << prev.second << ")";
+      LOG(WARN) << LOG_P1 << "Invalid D for Vehicle " << id << " (Received: " << d_p << ", Previous: " << prev.second
+                << ")";
       d_p = prev.second;
     }
 
     size_t lane = Map::LaneIndex(d_p);
 
     if (Map::InvalidLane(lane)) {
-      LOG(WARN) << "Invalid Lane for Vehicle " << id << " (Lane: " << lane << ")";
+      LOG(WARN) << LOG_P1 << "Invalid Lane for Vehicle " << id << " (Lane: " << lane << ")";
       continue;
     }
 
@@ -138,7 +140,7 @@ void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
   size_t lane = 0;
 
   for (auto &lane_traffic : this->traffic) {
-    LOG(DEBUG) << LOG_BUFFER << "Lane " << lane << " Traffic: " << lane_traffic.size();
+    LOG(DEBUG) << LOG_P1 << "Lane " << lane << " Traffic: " << lane_traffic.size();
     // Sort the vehicles by distance to the ego vehicle
     std::sort(lane_traffic.begin(), lane_traffic.end(), [&s](const Vehicle &a, const Vehicle &b) {
       return Map::ModDistance(a.state.s.p, s) < Map::ModDistance(b.state.s.p, s);
@@ -148,7 +150,7 @@ void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
 }
 
 void PathPlanning::PathPlanner::UpdatePredictions() {
-  LOG(INFO) << "Updating Traffic Predictions";
+  LOG(INFO) << LOG_P << "Updating Traffic Predictions";
   const size_t trajectory_length = this->trajectory_generator.TrajectoryLength(TRAJECTORY_T);
   for (auto &lane_traffic : this->traffic) {
     for (auto &vehicle : lane_traffic) {
@@ -160,7 +162,7 @@ void PathPlanning::PathPlanner::UpdatePredictions() {
 }
 
 void PathPlanning::PathPlanner::UpdatePlan(double processing_time) {
-  LOG(INFO) << "Updating Next Plan (Processing Time: " << processing_time << " s)";
+  LOG(INFO) << LOG_P << "Updating Plan (Processing Time: " << processing_time << " s)";
   Plan plan = this->behaviour_planner.Update(this->ego, this->traffic, TRAJECTORY_T, processing_time);
   if (!plan.trajectory.empty()) {
     this->ego.UpdateTrajectory(plan.trajectory);
@@ -194,7 +196,7 @@ void PathPlanning::PathPlanner::DrawRoad(double processing_time) {
       for (auto &vehicle : lane_traffic) {
         if (std::fabs(Map::ModDistance(ref_s, vehicle.state.s.p)) <= VEHICLE_LENGTH / 2) {
           empty_lane = false;
-          std::cout << "\033[1;7;33m "<< std::setfill('0') << std::setw(2) << vehicle.id << " \033[0m";
+          std::cout << "\033[1;7;33m " << std::setfill('0') << std::setw(2) << vehicle.id << " \033[0m";
           break;
         }
       }

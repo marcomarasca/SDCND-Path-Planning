@@ -25,13 +25,13 @@ PathPlanning::Plan PathPlanning::BehaviourPlanner::Update(const Vehicle &ego, co
   const size_t trajectory_length = this->trajectory_generator.TrajectoryLength(t);
 
   for (size_t target_lane : this->GetAvailableLanes(ego)) {
-    LOG(DEBUG) << "Evaluating Lane: " << target_lane;
+    LOG(DEBUG) << LOG_P1 << "Evaluating Lane: " << target_lane;
 
     // Generate a candidate plan
     Plan plan = this->GeneratePlan(ego, traffic, t, processing_time, target_lane);
     const double plan_cost = this->EvaluatePlan(plan, traffic);
 
-    LOG(DEBUG) << "Cost for Lane " << target_lane << ": " << plan_cost;
+    LOG(DEBUG) << LOG_P1 << "Cost for Lane " << target_lane << ": " << plan_cost;
 
     if (plan_cost < min_cost) {
       min_cost = plan_cost;
@@ -41,9 +41,9 @@ PathPlanning::Plan PathPlanning::BehaviourPlanner::Update(const Vehicle &ego, co
 
   if (!best_plan.trajectory.empty()) {
     this->plan = best_plan;
-    LOG(INFO) << "<------ Best Lane: " << Map::LaneIndex(best_plan.target.d.p) << " (Cost: " << min_cost << ") ------>";
+    LOG(INFO) << "Best Lane: " << Map::LaneIndex(best_plan.target.d.p) << " (Cost: " << min_cost << ")";
   } else {
-    LOG(WARN) << "<------ Cannot Compute Candidate ------>";
+    LOG(WARN) << "Cannot Compute Candidate";
   }
 
   return best_plan;
@@ -76,7 +76,7 @@ PathPlanning::Frenet PathPlanning::BehaviourPlanner::PredictTarget(const Vehicle
   // Limits the acceleration when going slower
   const double max_acc = start.s.v < this->min_speed ? this->max_acc / 2.0 : this->max_acc;
 
-  LOG(DEBUG) << LOG_BUFFER << "Lane Constraints: " << max_speed << " m/s, " << max_acc << " m/s^2";
+  LOG(DEBUG) << LOG_P2 << "Lane Constraints: " << max_speed << " m/s, " << max_acc << " m/s^2";
 
   // Velocity: v1 + a * t
   double s_v = std::min(max_speed, start.s.v + max_acc * t);
@@ -95,23 +95,24 @@ PathPlanning::Frenet PathPlanning::BehaviourPlanner::PredictTarget(const Vehicle
     // Computes breaking safe distance
     const double safe_distance = ahead.SafeDistance(ahead.trajectory.size() - 1, this->max_acc);
 
-    LOG(DEBUG) << LOG_BUFFER << "Vehicle " << ahead.id << " Ahead in " << distance
-               << " m (Safe Distance: " << safe_distance << " m)";
+    LOG(DEBUG) << LOG_P2 << "Vehicle " << ahead.id << " Ahead in " << distance << " m (Safe Distance: " << safe_distance
+               << " m)";
 
     // Max s delta at time t according to front vehicle position at t
     const double max_s_p_delta = Map::ModDistance(ahead.trajectory.back().s.p - safe_distance, start.s.p);
     if (max_s_p_delta < s_p_delta) {
       s_v = std::min(s_v, ahead.state.s.v);
+
+      LOG(DEBUG) << LOG_P2 << "Following Vehicle at " << s_v << " m/s (Delta: " << s_p_delta
+                 << " m, Max: " << max_s_p_delta << " m)";
+
       s_p_delta = max_s_p_delta;
       s_a = 0.0;
 
       if (s_p_delta < 0) {
-        LOG(WARN) << "Collision Risk";
+        LOG(WARN) << "Collision Risk (Max Delta: " << max_s_p_delta << " m)";
         s_p_delta = safe_distance;
       }
-
-      LOG(DEBUG) << LOG_BUFFER << "Following Vehicle " << ahead.id << " at Speed: " << s_v << " (Delta: " << s_p_delta
-                 << ", Max Delta: " << max_s_p_delta << ")";
     }
   }
 
@@ -132,7 +133,7 @@ PathPlanning::Plan PathPlanning::BehaviourPlanner::GeneratePlan(const Vehicle &e
   // Generates a trajectory considering the delay given by the processing time
   size_t forward_steps = std::min(ego.trajectory.size(), this->trajectory_generator.TrajectoryLength(processing_time));
 
-  LOG(DEBUG) << LOG_BUFFER << "Forward Steps: " << forward_steps;
+  LOG(DEBUG) << LOG_P2 << "Forward Steps: " << forward_steps;
 
   // Generates a target for the given lane
   Frenet target = this->PredictTarget(ego, traffic, target_lane, t);

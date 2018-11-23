@@ -13,9 +13,11 @@
 
 namespace PathPlanning {
 
-const std::string LOG_BUFFER = "  ";
+const std::string LOG_P = "-> ";
+const std::string LOG_P1 = " ";
+const std::string LOG_P2 = "  * ";
 const size_t COST_LOG_BUFFER = 22;
-const size_t COST_LOG_W = 10;
+const size_t COST_LOG_WIDTH = 12;
 
 struct State {
   // Position

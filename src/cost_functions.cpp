@@ -15,7 +15,7 @@ double PathPlanning::CostFunctions::CollisionCost(const Plan &plan, const Plan &
     collision_cost = 1.0;
   }
 
-  LOG(DEBUG) << LOG_BUFFER << std::left << std::setw(COST_LOG_BUFFER) << "Collistion Cost: " << std::setw(COST_LOG_W)
+  LOG(DEBUG) << LOG_P2 << std::left << std::setw(COST_LOG_BUFFER) << "Collistion Cost: " << std::setw(COST_LOG_WIDTH)
              << collision_cost << " (Min Distance: " << collision.second << ")";
 
   return collision_cost;
@@ -25,7 +25,7 @@ double PathPlanning::CostFunctions::BufferCost(const Plan &plan, const Plan &pre
                                                const TrafficData &traffic_data, double max_speed) {
   double buffer_cost = Logistic(VEHICLE_LENGTH * 2 / collision.second);
 
-  LOG(DEBUG) << LOG_BUFFER << std::left << std::setw(COST_LOG_BUFFER) << "Buffer Cost: " << std::setw(COST_LOG_W)
+  LOG(DEBUG) << LOG_P2 << std::left << std::setw(COST_LOG_BUFFER) << "Buffer Cost: " << std::setw(COST_LOG_WIDTH)
              << buffer_cost << " (Min Distance: " << collision.second << ")";
 
   return buffer_cost;
@@ -39,8 +39,8 @@ double PathPlanning::CostFunctions::AverageSpeedCost(const Plan &plan, const Pla
   double speed = Map::ModDistance(trajectory.back().s.p, trajectory.front().s.p) / plan.t;
   double speed_cost = Logistic((max_speed - speed) / max_speed);
 
-  LOG(DEBUG) << LOG_BUFFER << std::left << std::setw(COST_LOG_BUFFER) << "Speed Cost: " << std::setw(COST_LOG_W)
-             << speed_cost << " (Avg speed: " << speed << ")";
+  LOG(DEBUG) << LOG_P2 << std::left << std::setw(COST_LOG_BUFFER) << "Speed Cost: " << std::setw(COST_LOG_WIDTH)
+             << speed_cost << " (Avg Speed: " << speed << ")";
 
   return speed_cost;
 }
@@ -55,7 +55,7 @@ double PathPlanning::CostFunctions::LaneSpeedCost(const Plan &plan, const Plan &
     lane_speed_cost = Logistic((max_speed - lane_speed) / max_speed);
   }
 
-  LOG(DEBUG) << LOG_BUFFER << std::left << std::setw(COST_LOG_BUFFER) << "Lane Speed Cost: " << std::setw(COST_LOG_W)
+  LOG(DEBUG) << LOG_P2 << std::left << std::setw(COST_LOG_BUFFER) << "Lane Speed Cost: " << std::setw(COST_LOG_WIDTH)
              << lane_speed_cost << " (Lane Speed: " << traffic_data.lane_speed << ")";
 
   return lane_speed_cost;
@@ -73,7 +73,7 @@ double PathPlanning::CostFunctions::LaneTrafficCost(const Plan &plan, const Plan
     lane_traffic_cost = Logistic((double(traffic_data.lane_traffic) + distance_factor) / traffic_data.tot_traffic);
   }
 
-  LOG(DEBUG) << LOG_BUFFER << std::left << std::setw(COST_LOG_BUFFER) << "Traffic Cost: " << std::setw(COST_LOG_W)
+  LOG(DEBUG) << LOG_P2 << std::left << std::setw(COST_LOG_BUFFER) << "Traffic Cost: " << std::setw(COST_LOG_WIDTH)
              << lane_traffic_cost << " (Traffic: " << traffic_data.lane_traffic
              << ", Distance: " << traffic_data.min_distance << ")";
 
@@ -90,7 +90,7 @@ double PathPlanning::CostFunctions::ChangePlanCost(const Plan &plan, const Plan 
 
   const double change_plan_cost = current_plan_lane != target_lane ? 1.0 : 0.0;
 
-  LOG(DEBUG) << LOG_BUFFER << std::left << std::setw(COST_LOG_BUFFER) << "Change Plan Cost: " << std::setw(COST_LOG_W)
+  LOG(DEBUG) << LOG_P2 << std::left << std::setw(COST_LOG_BUFFER) << "Change Plan Cost: " << std::setw(COST_LOG_WIDTH)
              << change_plan_cost;
 
   return change_plan_cost;
@@ -111,8 +111,8 @@ double PathPlanning::CostFunctions::UnfinishedPlanCost(const Plan &plan, const P
     unfinished_plan_cost = Logistic(d_distance / LANE_WIDTH);
   }
 
-  LOG(DEBUG) << LOG_BUFFER << std::left << std::setw(COST_LOG_BUFFER)
-             << "Unfinished Plan Cost: " << std::setw(COST_LOG_W) << unfinished_plan_cost
+  LOG(DEBUG) << LOG_P2 << std::left << std::setw(COST_LOG_BUFFER)
+             << "Unfinished Plan Cost: " << std::setw(COST_LOG_WIDTH) << unfinished_plan_cost
              << " (Distance: " << d_distance << ")";
 
   return unfinished_plan_cost;

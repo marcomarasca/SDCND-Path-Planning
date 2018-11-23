@@ -10,7 +10,7 @@ enum LogLevel { DEBUG, INFO, WARN, ERROR };
 
 struct LogConfig {
   bool enabled = true;
-  LogLevel level = WARN;
+  LogLevel level = INFO;
 };
 
 extern LogConfig LOG_CONFIG;

@@ -26,7 +26,7 @@ double PathPlanning::PlanEvaluator::Evaluate(const Plan &plan, const Plan &previ
   size_t target_lane = Map::LaneIndex(trajectory.back().d.p);
 
   if (Map::InvalidLane(start_lane) || Map::InvalidLane(target_lane)) {
-    LOG(WARN) << LOG_BUFFER << "Invalid Lane: " << trajectory.front().d.p << ", " << trajectory.back().d.p;
+    LOG(WARN) << LOG_P2 << "Invalid Lane: " << trajectory.front().d.p << ", " << trajectory.back().d.p;
     return std::numeric_limits<double>::max();
   }
 
@@ -93,7 +93,7 @@ PathPlanning::Collision PathPlanning::PlanEvaluator::DetectCollision(const FTraj
       closest_distance = distance_at_t;
     }
     if (s_distance < VEHICLE_LENGTH * 2 && Map::LaneIndex(step.d.p) == Map::LaneIndex(other_step.d.p)) {
-      LOG(DEBUG) << LOG_BUFFER << "Collision Detected on Trajectory: " << step.s.p << ", " << step.d.p << " - "
+      LOG(DEBUG) << LOG_P2 << "Collision Detected on Trajectory: " << step.s.p << ", " << step.d.p << " - "
                  << other_step.s.p << ", " << other_step.d.p;
       collision = true;
       break;
@@ -120,7 +120,7 @@ PathPlanning::Collision PathPlanning::PlanEvaluator::DetectCollision(const FTraj
       }
 
       if (distance.first) {
-        LOG(DEBUG) << LOG_BUFFER << "Collision with Vehicle " << vehicle.id << ": " << trajectory.front().s.p << ", "
+        LOG(DEBUG) << LOG_P2 << "Collision with Vehicle " << vehicle.id << ": " << trajectory.front().s.p << ", "
                    << trajectory.front().d.p << " - " << vehicle.state.s.p << ", " << vehicle.state.d.p;
         collision = true;
         break;
