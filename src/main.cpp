@@ -13,12 +13,13 @@ using json = nlohmann::json;
 using PathPlanning::LOG;
 
 namespace PathPlanning {
-LogConfig LOG_CONFIG;
+PathPlanning::LogConfig LOG_CONFIG;
+}
 
-static const double REFRESH_RATE = 100;
-static PathPlanning::TimePoint LAST_REFRESH = PathPlanning::Timer::Now();
-static bool DRAW_MODE = false;
-}  // namespace PathPlanning
+std::string MAP_FILE_PATH = "../data/highway_map.csv";
+double REFRESH_RATE = 100;
+PathPlanning::TimePoint LAST_REFRESH = PathPlanning::Timer::Now();
+bool DRAW_MODE = false;
 
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
@@ -47,14 +48,14 @@ void ProcessTelemetry(uWS::WebSocket<uWS::SERVER> &ws, PathPlanning::PathPlanner
   const double processing_time =
       PathPlanning::Ms2s(PathPlanning::Timer::ToMilliseconds(timer.AverageDuration()).count());
 
-  planner.Update(telemetry, std::max(processing_time, PathPlanning::MIN_PROCESSING_TIME));
+  planner.Update(telemetry, processing_time);
 
-  if (PathPlanning::DRAW_MODE) {
-    PathPlanning::Duration delta = PathPlanning::Timer::Now() - PathPlanning::LAST_REFRESH;
+  if (DRAW_MODE) {
+    PathPlanning::Duration delta = PathPlanning::Timer::Now() - LAST_REFRESH;
 
-    if (PathPlanning::Timer::ToMilliseconds(delta).count() >= PathPlanning::REFRESH_RATE) {
+    if (PathPlanning::Timer::ToMilliseconds(delta).count() >= REFRESH_RATE) {
       planner.DrawRoad(processing_time);
-      PathPlanning::LAST_REFRESH = PathPlanning::Timer::Now();
+      LAST_REFRESH = PathPlanning::Timer::Now();
     }
   }
 
@@ -64,7 +65,7 @@ void ProcessTelemetry(uWS::WebSocket<uWS::SERVER> &ws, PathPlanning::PathPlanner
 
   LOG(PathPlanning::INFO) << "Processing time: " << PathPlanning::Timer::ToMilliseconds(update_d).count()
                           << " ms (Average: " << PathPlanning::Timer::ToMilliseconds(timer.AverageDuration()).count()
-                          << " ms)";
+                          << " ms)\n";
 
   json msgJson;
 
@@ -126,7 +127,7 @@ void StartServer(PathPlanning::Map &map) {
     LOG(PathPlanning::INFO) << "Listening to port " << port;
 
     // Configure draw mode
-    if (PathPlanning::DRAW_MODE) {
+    if (DRAW_MODE) {
       PathPlanning::LOG_CONFIG.enabled = false;
     }
   } else {
@@ -137,21 +138,53 @@ void StartServer(PathPlanning::Map &map) {
   h.run();
 }
 
-int main(int argc, char *argv[]) {
-  std::string map_file_path = "../data/highway_map.csv";
+void PrintUsage() {
+  std::cout << "Usage:\n\n   path_planning [options]\n" << std::endl;
+  std::cout << "Options:" << std::endl;
 
-  if (argc > 1) {
-    map_file_path = argv[1];
+  const size_t cols = 20;
+
+  std::cout << std::left << std::setw(cols) << "   -f <filename>"
+            << "= Custom path to the map file." << std::endl;
+  std::cout << std::left << std::setw(cols) << "   -d,--debug"
+            << "= Enable debug output." << std::endl;
+  std::cout << std::left << std::setw(cols) << "   -g,--graphic"
+            << "= Enable graphic mode (log disabled)." << std::endl;
+
+  std::cout << std::endl;
+
+  exit(EXIT_SUCCESS);
+}
+
+void ParseArguments(int argc, char *argv[]) {
+  for (size_t i = 1; i < argc; ++i) {
+    const std::string arg = argv[i];
+    if (arg == "-h" || arg == "--help") {
+      PrintUsage();
+    } else if (arg == "-f" || arg == "--filename") {
+      if (++i < argc) {
+        MAP_FILE_PATH = argv[i];
+      } else {
+        std::cerr << "Path to the file name required.\n" << std::endl;
+        PrintUsage();
+      }
+    } else if (arg == "-d" || arg == "--debug") {
+      PathPlanning::LOG_CONFIG.level = PathPlanning::LogLevel::DEBUG;
+    } else if (arg == "-g" || arg == "--graphic") {
+      DRAW_MODE = true;
+    } else {
+      PrintUsage();
+    }
   }
+}
 
-  // Configure logger/ draw mode
-  PathPlanning::DRAW_MODE = false;
-  PathPlanning::LOG_CONFIG.level = PathPlanning::LogLevel::DEBUG;
+int main(int argc, char *argv[]) {
+  ParseArguments(argc, argv);
 
   PathPlanning::Map map;
 
   try {
-    map.LoadWaypoints(map_file_path);
+    map.LoadWaypoints(MAP_FILE_PATH);
   } catch (std::exception &e) {
     LOG(PathPlanning::ERROR) << e.what();
     exit(EXIT_FAILURE);
