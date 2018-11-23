@@ -129,6 +129,8 @@ void StartServer(PathPlanning::Map &map) {
     // Configure draw mode
     if (DRAW_MODE) {
       PathPlanning::LOG_CONFIG.enabled = false;
+      // Clear screen *unix only
+      std::cout << __CLEAR_SCREEN__;
     }
   } else {
     LOG(PathPlanning::ERROR) << "Failed to listen to port";

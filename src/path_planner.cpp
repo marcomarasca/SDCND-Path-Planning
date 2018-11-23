@@ -177,42 +177,45 @@ void PathPlanning::PathPlanner::DrawRoad(double processing_time) {
   const size_t ego_lane = this->ego.GetLane();
   const double target_s_p = this->ego.trajectory.back().s.p;
   const size_t target_lane = Map::LaneIndex(this->ego.trajectory.back().d.p);
-#if defined(__LINUX__) || defined(__gnu_linux__) || defined(__linux__)
-  // Clear the screen to avoid flickering, *nix only
-  std::cout << "\x1b[H\x1b[J";
-#endif
-  std::cout << "P: " << this->ego.state.s.p << " m" << '\n';
-  std::cout << "L: " << Map::LaneIndex(this->ego.trajectory.back().d.p) << '\n';
-  std::cout << "T: " << processing_time << " s\n\n";
+
+  // Move to top of the screen (*unix terminal only)
+  std::cout << __TO_TOP__;
+  std::cout << __CLEAR_LINE__ << "P: " << this->ego.state.s.p << " m" << '\n';
+  std::cout << __CLEAR_LINE__ << "L: " << Map::LaneIndex(this->ego.trajectory.back().d.p) << '\n';
+  std::cout << __CLEAR_LINE__ << "T: " << processing_time << " s\n\n";
   for (int i = DRAW_AHEAD; i > -DRAW_BEHIND; i -= VEHICLE_LENGTH) {
     const double ref_s = this->ego.state.s.p + i;
     size_t lane_n = 0;
     for (auto &lane_traffic : traffic) {
       if (lane_n == 0) {
-        std::cout << "\033[1;33m";
+        std::cout << __C_MID_LANE__ << "||";
+      } else if (i % 2 != 0) {
+        std::cout << "|";
+      } else {
+        std::cout << " ";
       }
-      std::cout << "|\033[0m";
+      std::cout << __C_RESET__;
       bool empty_lane = true;
       for (auto &vehicle : lane_traffic) {
         if (std::fabs(Map::ModDistance(ref_s, vehicle.state.s.p)) <= VEHICLE_LENGTH / 2) {
           empty_lane = false;
-          std::cout << "\033[1;7;33m " << std::setfill('0') << std::setw(2) << vehicle.id << " \033[0m";
+          std::cout << __C_TRAFFIC__ << " " << std::setfill('0') << std::setw(2) << vehicle.id << " " << __C_RESET__;
           break;
         }
       }
       if (empty_lane) {
         if (lane_n == ego_lane && this->ego.state.s.p == ref_s) {
-          std::cout << "\033[1;32m[<>]\033[0m";  // Ego vehicle
+          std::cout << __C_EGO__ << "[<>]" << __C_RESET__;  // Ego vehicle
           double target_s_p = this->ego.trajectory.back().s.p;
         } else if (lane_n == target_lane && std::fabs(Map::ModDistance(ref_s, target_s_p)) <= VEHICLE_LENGTH / 2) {
-          std::cout << "\033[1;36m[><]\033[0m";  // Trajectory target
+          std::cout << __C_TARGET__ << "[><]" << __C_RESET__;  // Trajectory target
         } else {
           std::cout << "    ";  // Empty
         }
       }
       ++lane_n;
     }
-    std::cout << "|\033[0m\n";
+    std::cout << "|" << __C_RESET__ << "\n";
   }
   std::cout << std::flush;
 }

@@ -30,6 +30,31 @@ const double DRAW_AHEAD = 135;
 // Number of meters behind of the road to draw, must be multiple of vehicle length
 const double DRAW_BEHIND = 50;
 
+#if defined(__LINUX__) || defined(__gnu_linux__) || defined(__linux__)
+#define __LX_DRAW__
+#endif
+
+// ANSI Drawing colors codes (https://en.wikipedia.org/wiki/ANSI_escape_code)
+#ifdef __LX_DRAW__
+#define __C_MID_LANE__ "\033[0;33m"
+#define __C_TRAFFIC__ "\033[1;7;33m"
+#define __C_EGO__ "\033[1;32m"
+#define __C_TARGET__ "\033[1;36m"
+#define __C_RESET__ "\033[0m"
+#define __TO_TOP__ "\x1b[H"
+#define __CLEAR_SCREEN__ "\x1b[H\x1b[J"
+#define __CLEAR_LINE__ "                            \r"
+#else
+#define __C_MID_LANE__ ""
+#define __C_TRAFFIC__ ""
+#define __C_EGO__ ""
+#define __C_TARGET__ ""
+#define __C_RESET__ ""
+#define __TO_TOP__ ""
+#define __CLEAR_SCREEN__ ""
+#define __CLEAR_LINE__ ""
+#endif
+
 using json = nlohmann::json;
 
 /**
@@ -84,7 +109,6 @@ class PathPlanner {
    * time (in seconds)
    */
   void UpdatePlan(double processing_time);
-
 };
 
 }  // namespace PathPlanning
