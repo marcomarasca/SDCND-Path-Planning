@@ -70,14 +70,14 @@ void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
   std::map<int, Pair> vehicles;
 
   for (auto &lane : this->traffic) {
-    // Reserve some space in the lane
-    lane.clear();
-    lane.reserve(sensor_fusion.size() / traffic.size());
     // Maps vehicles id to their frenet coordinates
     std::for_each(lane.begin(), lane.end(), [&vehicles](const Vehicle &v) {
       Pair coord{v.state.s.p, v.state.d.p};
       vehicles.emplace(v.id, coord);
     });
+    // Reserve some space in the lane
+    lane.clear();
+    lane.reserve(sensor_fusion.size() / traffic.size());
   }
 
   // Reads sensor fusion data and maps it to the current vehicles
@@ -131,7 +131,7 @@ void PathPlanning::PathPlanner::UpdateTraffic(const json &telemetry) {
 
     auto frenet_v = this->map.FrenetVelocity(s_p, d_p, v_x, v_y);
 
-    Frenet state{{s_p, frenet_v.first, 0.0}, {d_p, frenet_v.second, 0.0}};
+    const Frenet state{{s_p, frenet_v.first, 0.0}, {d_p, frenet_v.second, 0.0}};
 
     this->traffic[lane].emplace_back(id, state);
   }
