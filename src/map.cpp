@@ -1,6 +1,5 @@
 #include "map.h"
 
-#include <math.h>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -10,7 +9,7 @@
 size_t PathPlanning::Map::LaneIndex(double d) { return size_t(d / PathPlanning::LANE_WIDTH); }
 double PathPlanning::Map::LaneDisplacement(size_t lane_index) { return std::min(lane_index * LANE_WIDTH + LANE_WIDTH / 2.0, MAP_MAX_D); }
 bool PathPlanning::Map::InvalidLane(size_t lane_index) { return lane_index >= LANES_N; };
-double PathPlanning::Map::Mod(double s) { return fmod(s, MAP_MAX_S); }
+double PathPlanning::Map::Mod(double s) { return std::fmod(s, MAP_MAX_S); }
 double PathPlanning::Map::ModDistance(double s1, double s2) {
   // Checks the correct wrapping when comparing distances that are on different side of the circuit
   // E.g. 4--5--6--0--1--2--3 |-->4
