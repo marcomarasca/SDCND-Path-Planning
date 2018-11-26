@@ -9,7 +9,7 @@
 [pp_gif]: ./images/path_planning.gif "Path Planning on an Highway"
 [pp_stuck_gif]: ./images/path_planning_stuck.gif "Path Planning Limitations"
 
-![Gif: Path Planning on an Highway][pp_gif]
+[![Gif: Path Planning on an Highway][pp_gif]](https://www.youtube.com/watch?v=aI6lPqmmsqM "Path Planning on an Highway")
 
 Overview
 ---
