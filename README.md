@@ -6,9 +6,10 @@
 [pp_architecture]: ./images/path_planning.png "Path planning architecture"
 [pp_frenet]: ./images/frenet.png "Frenet coordinates"
 [pp_frenet_2]: ./images/frenet_2.png "Frenet vs cartesian coordinates"
-[run_gif]: ./images/run.gif "Path Planning on an Highway"
+[pp_gif]: ./images/path_planning.gif "Path Planning on an Highway"
+[pp_stuck_gif]: ./images/path_planning_stuck.gif "Path Planning Limitations"
 
-![Gif: Path Planning on an Highway][run_gif]
+![Gif: Path Planning on an Highway][pp_gif]
 
 Overview
 ---
@@ -133,6 +134,18 @@ The [Plan Evaluator](./src/plan_evaluator.cpp) takes advantage of a set of indep
 * [Unfinished plan](./src/cost_functions.cpp#99): Similar to the previous one but considers the distance to the current plan lane, this acts as a deterrent when a lane change is already in progress to avoid swerving in the middle of the manoeuvre.
 
 Each cost is multiplied by a weight and summed up to define the final cost of a plan.
+
+## Limitations
+
+The current implementation makes a set of assumptions about the overall pipeline that introduce various limitations, in particular the behaviour planner only considers lanes that are adjacent to the ego vehicle. This may limit the planner in considering more efficient scenarios, for example in adapting the speed in order to move slowly toward a faster lane that is more than 1 lane away:
+
+![Gif: Path Planning Stuck][pp_stuck_gif]
+
+In the image above the planner initially chose the leftmost lane because the overall cost of the inner lanes is higher due to speed limitations (in general the left lanes are used for passing cars). Later on instead of slowing down and leading to the rightmost lane in order to pass the slower traffic ahead, the planner simply remains stuck to the choice between the two inner lanes on the left, following the vehicles ahead at lower speed. Ideally in such a scenario the planner should have detected the higher speed of the rightmost lane and planned for a longer period of time. 
+
+In the current implementation the behavior planner is updated at each tick together with the optimal trajectory, this may sometimes lead to situations in which the vehicle switches lanes, just to go back to the original lane (e.g. a car from behind is approaching faster and may increase the risk of collisions). A better approach would be to loosen the timing on the behavior update in respect to the trajectory generation towards the set goal. While the implementation may seem robust enough to avoid collisions in such situations, the overall comfort level is lower due to the number of lane changes.
+
+Additionally the cost functions implemented in this project, even though effective, are relatively simple and they do not actually consider the distance to the goal simply because the map is a circuit.
 
 Getting Started
 ---
