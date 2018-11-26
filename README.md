@@ -64,7 +64,7 @@ Path Planner
 ---
 In autonomous driving the *Path Planner* is in charge of generating *safe* and *efficient* trajectories that are fed to the agent controller (in one form or the other, depending on the chosen protocol) in order to navigate to a certain goal. The idea is that the data computed from other modules such as the localization module and the sensor fusion module are processed in order to generate a set of potential trajectories that are evaluated in order to find the one that minimize a certain (set of) cost functions that leads to the most efficient as well as safe movement towards the given goal.
 
-![Path planning components][pp_architecture]
+![Path planning components][pp_architecture]<br>*Path planning architecture - From Udacity*
 
 Path planning can be a considerably complex module, and probably one of the most difficult parts to design and implement in an autonomous agent, roughly we can split it into 3 main components:
 
@@ -101,13 +101,13 @@ The code is split in modules according to the responsibility:
 
 The project mainly works around [frenet coordinates](https://en.wikipedia.org/wiki/Frenet%E2%80%93Serret_formulas#Kinematics_of_the_frame) instead of the traditional cartesian coordinates. In brief the idea of Using Frenet coordinates is to have a system aligned with the direction of the road along its longitudinal axes (**s** component) and displacement (**d** component):
 
-![Frenet Coordinates][pp_frenet]
+![Frenet Coordinates][pp_frenet]<br>*Frenet Coordinates - From Udacity*
 
 This allows to have a coordinate system that is allows a simple representation of the movement of the car within a road and lanes boundaries:
 
-![Frenet Coordinates][pp_frenet_2]
+![Frenet Coordinates][pp_frenet_2]<br>*Frenet vs Cartesian Coordinates - From Udacity*
 
-In this implementation the *s* and *d* components are split and maintained separately for each [vehicle](./src/vehicle.h), and a [trajectory](./src/utils.h#43) is represents as a list of frenet states that change with time.
+In this implementation the *s* and *d* components are split and maintained separately for each [vehicle](./src/vehicle.h), and a [trajectory](./src/utils.h#43) is represented as a list of frenet states that change with time.
 
 ## Trajectory Generation
 
