@@ -203,7 +203,7 @@ Under windows (WSL) and linux you can make a clean installation as follows:
 3. ```sudo apt-get install cmake```
 4. ```sudo apt-get install openssl```
 5. ```sudo apt-get install libssl-dev```
-6. ```git clone https://github.com/marcomarasca/CarND-Path-Planning```
+6. ```git clone https://github.com/marcomarasca/SDCND-Path-Planning```
 7. ```sudo rm /usr/lib/libuWS.so```
 8. ```./install-ubuntu.sh```
 
